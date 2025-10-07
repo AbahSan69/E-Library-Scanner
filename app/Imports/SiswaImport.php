@@ -16,7 +16,7 @@ use PhpOffice\PhpSpreadsheet\Shared\Date;
 use Carbon\Carbon;
 use Throwable;
 
-class SiswaImport implements ToModel, WithHeadingRow, WithValidation
+class SiswaImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFailure
 {
     use Importable;
 
