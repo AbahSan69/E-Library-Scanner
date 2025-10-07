@@ -43,7 +43,6 @@ class SiswaController extends Controller
             'tanggal_lahir' => 'required',
             'alamat' => 'required',
             'no_hp' => 'required',
-            'status'   => 'required',
         ]);
     
         if ($validator->fails()) {
@@ -61,7 +60,7 @@ class SiswaController extends Controller
                 'tanggal_lahir' => $request->tanggal_lahir,
                 'alamat' => $request->alamat,
                 'no_hp' => $request->no_hp,
-                'status'   => $request->status,
+                'status'   => 'Aktif',
             ]);
 
             DB::commit();

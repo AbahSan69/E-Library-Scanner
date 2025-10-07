@@ -32,7 +32,7 @@ class SiswaImport implements ToModel, WithHeadingRow, WithValidation
                 : Carbon::parse($row['tanggal_lahir'])->format('Y-m-d'),
             'alamat'        => $row['alamat'],
             'no_hp'         => $row['no_hp'],
-            'status'        => $row['status'],
+            'status'        => $row['status'] ?? 'Aktif',
         ]);
     }
 
@@ -46,7 +46,6 @@ class SiswaImport implements ToModel, WithHeadingRow, WithValidation
             '*.tanggal_lahir'   => 'required',
             '*.alamat'          => 'required|string',
             '*.no_hp'          => 'required',
-            '*.status'          => 'required|in:Aktif,Tidak Aktif',
         ];
     }
 

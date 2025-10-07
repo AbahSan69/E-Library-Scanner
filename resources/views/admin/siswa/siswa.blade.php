@@ -292,14 +292,14 @@
                             <input type="text" id="no_hp" name="no_hp" class="form-control" placeholder="Masukkan Nomor Handphone" maxlength="15">
                             <small class="form-text text-muted">Hanya masukkan angka, maksimal 15 digit.</small>
                           </div>
-                        <div class="mb-4">
+                        {{-- <div class="mb-4">
                             <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
                             <select id="status" name="status" class="form-select select-search instructor" required>
                               <option value="" selected disabled>Pilih Status</option>
                               <option value="Aktif">Aktif</option>
                               <option value="Tidak Aktif">Tidak Aktif</option>
                             </select>
-                          </div>
+                          </div> --}}
                   </div>
                 </div>
                 <div class="block-content block-content-full text-end bg-body">
