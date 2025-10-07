@@ -9,16 +9,16 @@ use Carbon\Carbon;
 class Peminjaman extends Model
 {
     protected $table = 'peminjaman';
-    protected $fillable = ['siswa_id', 'buku_id', 'tanggal_pinjam','tanggal_kembali','status'];
+    protected $fillable = ['siswa_id', 'tanggal_pinjam','tanggal_kembali','status'];
 
     public function siswa()
     {
         return $this->belongsTo(Siswa::class);
     }
 
-    public function buku()
-    {
-        return $this->belongsTo(Buku::class);
+    public function detail()
+    {   
+        return $this->hasMany(DetailPeminjaman::class, 'id_peminjaman');
     }
 
     protected $appends = ['status_aktif'];

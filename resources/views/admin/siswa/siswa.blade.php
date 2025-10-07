@@ -32,6 +32,14 @@
                         <i class="fa fa-fw fa-plus"></i>
                         <span>Tambah Data</span>
                       </button>
+                      <form action="{{ route('admin.import_siswa') }}" method="POST" enctype="multipart/form-data" id="importForm" class="d-inline">
+                        @csrf
+                        <input type="file" name="file" id="fileInput" class="d-none" accept=".xlsx,.xls,.csv" required>
+                        <button type="button" class="btn btn-sm btn-alt-success" title="Import Data" onclick="document.getElementById('fileInput').click();">
+                          <i class="fa fa-fw fa-file-excel"></i>
+                          <span>Import Data</span>
+                        </button>
+                      </form>
                   </div>
                 </div>
                 <div class="block-content">
@@ -314,6 +322,11 @@
       <script src="{{ asset('assets/oneui/js/plugins/jquery-validation/additional-methods.js') }}"></script>
       <script src="{{ asset('assets/oneui/js/pages/be_forms_validation.min.js') }}"></script>
       <script>
+      document.getElementById('fileInput').addEventListener('change', function() {
+          if(this.files.length > 0){
+            document.getElementById('importForm').submit();
+          }
+        });
         function confirmationHapusData(url) {
             Swal.fire({
                 title: 'Apakah Anda Yakin?',

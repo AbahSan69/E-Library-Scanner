@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\SiswaImport;
 use Illuminate\Http\Request;
 use Exception;
 
@@ -23,7 +25,7 @@ class SiswaController extends Controller
               ->orWhere('kelas', 'like', '%' . $request->q . '%');
         }
 
-        $siswa = $query->orderBy('id', 'desc')->paginate(10);
+        $siswa = $query->orderBy('id', 'desc')->paginate(25);
         $total_siswa = $query->count();
         // agar query pencarian ikut di pagination
         $siswa->appends($request->only('q'));
@@ -69,6 +71,26 @@ class SiswaController extends Controller
         } catch (Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan data.');
+        }
+    }
+
+    public function import_excel(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        try {
+            Excel::import(new SiswaImport, $request->file('file'));
+
+            // 🔥 Redirect setelah sukses
+            return redirect()->route('admin.siswa')
+                ->with('toast_success', 'Import siswa berhasil!');
+            
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            return redirect()->route('admin.siswa')
+                ->with('toast_error', 'Import gagal pada baris: ' . $failures[0]->row() . ' - ' . $failures[0]->errors()[0]);
         }
     }
 

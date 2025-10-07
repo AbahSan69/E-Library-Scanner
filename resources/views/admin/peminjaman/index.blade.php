@@ -88,10 +88,11 @@
                       <i class="fa fa-fw fa-file-excel"></i>
                       <span>Export</span>
                     </button>
-                    <button type="button" class="btn btn-sm btn-alt-primary js-bs-tooltip-enabled me-1" title="Tambah Data" data-bs-toggle="modal" data-bs-target="#modal-block-vcenter-extra-large-tambah">
+                    {{-- <button type="button" class="btn btn-sm btn-alt-primary js-bs-tooltip-enabled me-1" title="Tambah Data" data-bs-toggle="modal" data-bs-target="#modal-block-vcenter-extra-large-tambah">
                         <i class="fa fa-fw fa-plus"></i>
                         <span>Tambah Data</span>
-                    </button>
+                    </button> --}}
+                    <a href="{{ route('admin.coba') }}" class="btn btn-sm btn-alt-primary me-1"><span>Tambah Data</span></a>
                   </div>
                 </div>
                 <div class="block-content">
@@ -104,8 +105,8 @@
                           </th>
                           <th style="width: 100px;">NISN</th>
                           <th>Nama peminjaman</th>
-                          <th style="width: 100px;">ISBN</th>
-                          <th >Judul Buku</th>
+                          {{-- <th style="width: 100px;">ISBN</th>
+                          <th >Judul Buku</th> --}}
                           <th style="width: 100px;">Tanggal Pinjam</th>
                           <th style="width: 100px;">Tanggal Kembali</th>
                           <th style="width: 100px;">Status</th>
@@ -128,12 +129,30 @@
                         <td class="fw-semibold fs-sm">
                             {{ $list_peminjaman->siswa->nama }}
                         </td>
-                        <td class="fw-semibold fs-sm">
-                          {{ $list_peminjaman->buku->isbn }}
-                        </td>
-                        <td class="fw-semibold fs-sm">
-                          {{ $list_peminjaman->buku->judul }}
-                        </td>
+                        {{-- <td class="fw-semibold fs-sm">
+                          @if($list_peminjaman->detail->isNotEmpty())
+                              <ul class="mb-0 ps-3">
+                                  @foreach($list_peminjaman->detail as $detail)
+                                      <li>{{ $detail->buku->isbn ?? '-' }}</li>
+                                  @endforeach
+                              </ul>
+                          @else
+                              <em class="text-muted">-</em>
+                          @endif
+                      </td>
+                      
+                      <td class="fw-semibold fs-sm">
+                          @if($list_peminjaman->detail->isNotEmpty())
+                              <ul class="mb-0 ps-3">
+                                  @foreach($list_peminjaman->detail as $detail)
+                                      <li>{{ $detail->buku->judul ?? 'Buku tidak ditemukan' }}</li>
+                                  @endforeach
+                              </ul>
+                          @else
+                              <em class="text-muted">Tidak ada buku</em>
+                          @endif
+                      </td> --}}
+                      
                         <td class="fw-semibold fs-sm">
                           {{ $list_peminjaman->tanggal_pinjam }}
                         </td>
@@ -148,7 +167,7 @@
                                   </span>
                                   @break
                       
-                              @case('Dikembalikan')
+                              @case('Kembali')
                                   <span class="fs-xs fw-semibold d-inline-block py-1 px-3 rounded-pill bg-info-light text-primary">
                                       {{ $list_peminjaman->status_aktif }}
                                   </span>
@@ -168,6 +187,9 @@
                       </td>                       
                         <td class="text-center">
                           <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-alt-info js-bs-tooltip-enabled me-2" title="Detail" data-bs-toggle="modal" data-bs-target="#modal-block-vcenter-extra-large-detail-{{ $list_peminjaman->id }}">
+                              <i class="fa fa-fw fa-info"></i>
+                            </button>
                             <button type="button" class="btn btn-sm btn-alt-warning js-bs-tooltip-enabled me-2" title="Edit" data-bs-toggle="modal" data-bs-target="#modal-block-vcenter-extra-large-tambah-{{ $list_peminjaman->id }}">
                               <i class="fa fa-fw fa-pencil"></i>
                             </button>
@@ -178,6 +200,65 @@
                         </td>
                       </tr>
                     </tbody>
+
+                    <!-- Modal Detail Peminjaman -->
+  <div class="modal fade" id="modal-block-vcenter-extra-large-detail-{{ $list_peminjaman->id }}" tabindex="-1" aria-labelledby="modalDetailLabel-{{ $list_peminjaman->id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalDetailLabel-{{ $list_peminjaman->id }}">
+            Detail Peminjaman - {{ $list_peminjaman->siswa->nama }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          @if($list_peminjaman->detail->isEmpty())
+            <div class="alert alert-warning text-center">
+              Tidak ada buku dalam peminjaman ini.
+            </div>
+          @else
+            @foreach($list_peminjaman->detail as $i => $detail)
+              <div class="border rounded p-3 mb-2 d-flex justify-content-between align-items-center">
+                <div>
+                  <div><strong>{{ $i+1 }}. {{ $detail->buku->judul }}</strong></div>
+                  <div class="text-muted small">
+                    Pengarang: {{ $detail->buku->pengarang ?? '-' }}<br>
+                    Tahun: {{ $detail->buku->tahun_terbit ?? '-' }}<br>
+                    Barcode: {{ $detail->buku->no_barcode }}
+                  </div>
+                </div>
+                <div>
+                  @switch($detail->status)
+                  @case('Dipinjam')
+                      <span class="fs-xs fw-semibold d-inline-block py-1 px-3 rounded-pill bg-success-light text-success">
+                          {{ $detail->status }}
+                      </span>
+                      @break
+          
+                  @case('Kembali')
+                      <span class="fs-xs fw-semibold d-inline-block py-1 px-3 rounded-pill bg-info-light text-primary">
+                          {{ $detail->status }}
+                      </span>
+                      @break
+          
+                  @default
+                      <span class="fs-xs fw-semibold d-inline-block py-1 px-3 rounded-pill bg-secondary-light text-secondary">
+                          {{ $detail->status }}
+                      </span>
+              @endswitch
+                </div>
+              </div>
+            @endforeach
+          @endif
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
                     <!-- modal Edit Data -->
                     <div class="modal fade" id="modal-block-vcenter-extra-large-tambah-{{ $list_peminjaman->id }}" tabindex="-1" aria-labelledby="modal-block-vcenter" style="display: none;" aria-hidden="true">
@@ -206,16 +287,8 @@
                                   <input type="text" class="form-control" id="nama" name="nama"  placeholder="Masukan nama ..." value="{{ $list_peminjaman->siswa->nama }}" readonly required>
                                 </div>
                                 <div class="mb-4">
-                                  <label class="col-sm-4 col-form-label" for="example-hf-isbn">ISBN <span class="text-danger">*</span></label>
-                                  <input type="text" class="form-control" id="isbn" name="isbn"  placeholder="Masukan isbn ..." value="{{ $list_peminjaman->buku->isbn }}" readonly required>
-                                </div>
-                                <div class="mb-4">
-                                  <label class="col-sm-4 col-form-label" for="example-hf-judul">ISBN <span class="text-danger">*</span></label>
-                                  <input type="text" class="form-control" id="judul" name="judul"  placeholder="Masukan judul ..." value="{{ $list_peminjaman->buku->judul }}" readonly required>
-                                </div>
-                                <div class="mb-4">
                                   <label for="tanggal-pinjam" class="form-label">Tanggal Pinjam <span class="text-danger">*</span></label>
-                                  <input type="date" id="tanggal_pinjam" name="tanggal_pinjam" class="form-control" value="{{ $list_peminjaman->tanggal_pinjam }}" required>
+                                  <input type="date" id="tanggal_pinjam" name="tanggal_pinjam" class="form-control" value="{{ $list_peminjaman->tanggal_pinjam }}" readonly required>
                                 </div>
                                 <div class="mb-4">
                                   <label for="tanggal-kembali" class="form-label">Tanggal Kembali <span class="text-danger">*</span></label>
@@ -247,61 +320,6 @@
               </div>
         </div>
 
-        <!-- modal Tamnbah Data -->
-        <div class="modal fade" id="modal-block-vcenter-extra-large-tambah" tabindex="-1" aria-labelledby="modal-block-vcenter" style="display: none;" aria-hidden="true" data-bs-focus="true">
-            <div class="modal-dialog modal-dialog-centered" role="document">
-              <div class="modal-content">
-                <div class="block block-rounded block-transparent mb-0">
-                  <div class="block-header block-header-default">
-                    <h3 class="block-title">Modal Tambah peminjaman</h3>
-                    <div class="block-options">
-                      <button type="button" class="btn-block-option" data-bs-dismiss="modal" aria-label="Close">
-                        <i class="fa fa-fw fa-times"></i>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="block-content fs-sm">
-                    <form class="space-y-4" action="{{ route('admin.simpan_peminjaman') }}" method="POST">
-                      @csrf
-                      <div class="row">
-                        <div class="mb-4">
-                            <label for="barcode" class="form-label">Scan Barcode <span class="text-danger">*</span></label>
-                            <input type="text" name="barcode" id="barcode" class="form-control" autofocus required>
-                            <small class="text-muted">Arahkan scanner ke barcode buku, lalu tekan scan.</small>
-                        </div>
-                        <div class="mb-4">
-                            <label for="siswa_id" class="form-label">Siswa <span class="text-danger">*</span></label>
-                            {{-- <select id="siswa_id" name="siswa_id" class="form-select select-search instructor" required>
-                               <option value="" selected disabled>Pilih Siswa</option>
-                                @foreach ($siswa as $s)
-                                    <option value="{{ $s->id }}">{{ $s->nisn }} - {{ $s->nama }}</option>
-                                @endforeach
-                            </select> --}}
-
-                            <input type="text" id="search" class="form-control" placeholder="Ketik nama atau NISN...">
-                            <ul id="result" class="list-group mt-2"></ul>
-                    
-                            <!-- Hidden untuk simpan ID siswa -->
-                            <input type="hidden" id="siswa_id" name="siswa_id">
-                            
-                        </div>
-                        <div class="mb-4">
-                            <label for="tanggal_kembali" class="form-label">Tanggal Kembali <span class="text-danger">*</span></label>
-                            <input type="date" name="tanggal_kembali" id="tanggal_kembali" class="form-control" required>
-                        </div>  
-                      </div>
-                </div>
-                <div class="block-content block-content-full text-end bg-body">
-                  <button type="button" class="btn btn-sm btn-alt-secondary me-1" data-bs-dismiss="modal">Close</button>
-                  <button type="submit" id="btn-register" class="btn btn-sm btn-primary"">Tambah</button>
-                </div>
-              </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- modal Export Data -->
       <div class="modal fade" id="modal-block-vcenter-extra-large-export" tabindex="-1" aria-labelledby="modal-block-vcenter" style="display: none;" aria-hidden="true" data-bs-focus="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
@@ -331,18 +349,18 @@
                     <div id="dateRange">
                       <div class="mb-3">
                         <label for="start_date" class="form-label">Dari Tanggal</label>
-                        <input type="date" class="form-control" name="start_date" id="start_date">
+                        <input type="date" class="form-control" name="start_date" id="export_start_date">
                       </div>
                       <div class="mb-3">
                         <label for="end_date" class="form-label">Sampai Tanggal</label>
-                        <input type="date" class="form-control" name="end_date" id="end_date">
+                        <input type="date" class="form-control" name="end_date" id="export_end_date">
                       </div>
                     </div>
             
                     <!-- Pilih Status -->
                     <div class="mb-3">
                       <label for="status" class="form-label">Status</label>
-                      <select class="form-select" id="status" name="status" required>
+                      <select class="form-select" id="status_export" name="status" required>
                         <option selected="">Pilih Status Peminjaman</option>
                         <option value="Semua">Semua</option>
                         <option value="Dipinjam">Dipinjam</option>
@@ -404,12 +422,6 @@
   </div>
 </div>
 </div>
-
-
-<input type="text" id="search" placeholder="Ketik nama atau NIM..." autocomplete="off">
-    <ul id="result"></ul>
-
-    <input type="hidden" id="mahasiswa_id" name="mahasiswa_id">
     </main>
     @include('admin.layouts.footer')
 </div>
@@ -463,30 +475,32 @@
         });
 
         const todayCheck = document.getElementById("todayCheck");
-        const dateRange = document.getElementById("dateRange");
+const dateRange = document.getElementById("dateRange");
 
-        todayCheck.addEventListener("change", () => {
-          const disabled = todayCheck.checked;
-          dateRange.querySelectorAll("input").forEach(input => {
-            input.disabled = disabled;
-          });
-        });
+todayCheck.addEventListener("change", () => {
+  const disabled = todayCheck.checked;
+  dateRange.querySelectorAll("input").forEach(input => {
+    input.disabled = disabled;
+  });
+});
 
-        document.querySelector("#modal-block-vcenter-extra-large-export form").addEventListener("submit", function(e) {
-          const todayCheck = document.getElementById("todayCheck").checked;
-          const startDate = document.getElementById("start_date").value;
-          const endDate = document.getElementById("end_date").value;
+document.querySelector("#modal-block-vcenter-extra-large-export form")
+  .addEventListener("submit", function(e) {
+    const todayChecked = document.getElementById("todayCheck").checked;
+    const startDate = document.getElementById("export_start_date").value;
+    const endDate = document.getElementById("export_end_date").value;
 
-          if (!todayCheck && (!startDate || !endDate)) {
-            e.preventDefault(); // cegah form submit
-            Swal.fire({
-              icon: 'warning',
-              title: 'Oops...',
-              text: 'Pilih Hari Ini atau isi Range Tanggal terlebih dahulu!',
-              confirmButtonText: 'OK'
-            });
-          }
-        });
+    if (!todayChecked && (!startDate || !endDate)) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Oops...',
+        text: 'Pilih Hari Ini atau isi Range Tanggal terlebih dahulu!',
+        confirmButtonText: 'OK'
+      });
+    }
+});
+
 
         $(document).ready(function(){
 

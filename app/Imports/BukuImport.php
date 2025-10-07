@@ -12,9 +12,10 @@ use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\WithValidation;
 use Maatwebsite\Excel\Concerns\Importable;
 use Maatwebsite\Excel\Validators\Failure;
+use Maatwebsite\Excel\Concerns\WithCalculatedFormulas;
 use Throwable;
 
-class BukuImport implements ToModel, WithHeadingRow, WithValidation
+class BukuImport implements ToModel, WithHeadingRow, WithValidation,  WithCalculatedFormulas, SkipsOnFailure
 {
     use Importable;
 
@@ -27,7 +28,8 @@ class BukuImport implements ToModel, WithHeadingRow, WithValidation
             'penerbit'    => $row['penerbit'],
             'tahun_terbit'=> $row['tahun_terbit'],
             'lokasi_rak'  => $row['lokasi_rak'],
-            'status'      => $row['status'],
+            'stok'        => $row['stok'] ?? 1,
+            'status'      => $row['status'] ?? 'Tersedia',
         ]);
     }
 
@@ -36,11 +38,6 @@ class BukuImport implements ToModel, WithHeadingRow, WithValidation
         return [
             '*.isbn'        => 'nullable|unique:buku,isbn',
             '*.judul'       => 'required|string',
-            '*.pengarang'   => 'required|string',
-            '*.penerbit'    => 'required|string',
-            '*.tahun_terbit'=> 'required|digits:4',
-            '*.lokasi_rak'  => 'required|string',
-            '*.status'      => 'required|in:Tersedia,Dipinjam',
         ];
     }
 

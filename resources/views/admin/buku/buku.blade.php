@@ -34,11 +34,17 @@
                       </button>
                       <form action="{{ route('admin.import') }}" method="POST" enctype="multipart/form-data" id="importForm" class="d-inline">
                         @csrf
-                        <input type="file" name="file" id="fileInput" class="d-none" accept=".xlsx,.xls,.csv" required>
-                        <button type="button" class="btn btn-sm btn-alt-success" title="Import Data" onclick="document.getElementById('fileInput').click();">
+                        <input type="file" name="file" id="fileInput" class="d-none" accept=".xlsx,.xls,.csv">
+                        <button type="button" class="btn btn-sm btn-alt-success space-x-1" title="Import Data" onclick="document.getElementById('fileInput').click();">
                           <i class="fa fa-fw fa-file-excel"></i>
-                          <span>Import Data</span>
                         </button>
+                      </form>
+                      <form id="bulkDownloadForm" action="{{ route('admin.downloadBulkBarcode') }}" method="POST" target="_blank" class="d-inline">
+                        @csrf
+                        <button type="submit" id="downloadBtn" class="btn btn-sm btn-primary" title="Download Barcode Terpilih" disabled>
+                          <i class="fa fa-fw fa-download"></i>
+                        </button>
+                        <span id="selectedCount" class="ms-2 text-muted fw-semibold fs-sm"></span>
                       </form>
                   </div>
                 </div>
@@ -47,11 +53,13 @@
                     <table class="table table-vcenter">
                       <thead>
                         <tr class="text-center">
+                          <th style="width: 100px"><input type="checkbox" id="select-all"></th>
                           <th style="width: 100px;">
                             No
                           </th>
                           <th style="width: 100px;">No Barcode</th>
                           <th>Judul</th>
+                          <th>Stok</th>
                           <th style="width: 100px;">Status</th>
                           <th style="width: 100px;">Aksi</th>
                         </tr>
@@ -65,6 +73,9 @@
                           <tbody>
                             <tr>
                               <td class="text-center">
+                                <input type="checkbox" name="selected[]" value="{{ $list_buku->id }}" class="checkbox-buku">
+                            </td>
+                              <td class="fw-semibold fs-sm text-center">
                                 {{ $no = $no + 1 }}
                               </td>
                               <td class="fw-semibold fs-sm">
@@ -72,6 +83,9 @@
                               </td>
                               <td class="fw-semibold fs-sm">
                                 {{ $list_buku->judul}}
+                              </td>
+                              <td class="fw-semibold fs-sm">
+                                {{ $list_buku->stok}}
                               </td>
                               <td class="fw-semibold fs-sm">
                                 @if ($list_buku->status == 'Dipinjam')
@@ -93,18 +107,8 @@
                                   <button type="button" class="btn btn-sm btn-alt-info js-bs-tooltip-enabled me-2" title="Detail" data-bs-toggle="modal" data-bs-target="#modal-block-vcenter-extra-large-detail-{{ $list_buku->id }}">
                                     <i class="fa fa-fw fa-info"></i>
                                   </button>
-                                  <a href="{{ route('admin.cetak', $list_buku->id) }}" type="button" class="btn btn-sm btn-alt-success js-bs-tooltip-enabled me-2" title="Print Barcode" target="_blank">
-                                    <i class="fa fa-fw fa-print"></i>
-                                  </a>
-                                  {{-- <a href="{{ route('cetakPdf', $list_buku->id) }}" type="button" class="btn btn-sm btn-alt-primary js-bs-tooltip-enabled me-2" title="Download Barcode">
-                                    <i class="fa fa-fw fa-download"></i>
-                                  </a> --}}
-                                  {{-- <a href="data:image/png;base64,{{ DNS1D::getBarcodePNG($list_buku->no_barcode, 'EAN13', 2, 50, [0,0,0], true) }}"
-                                    download="barcode_{{ $list_buku->no_barcode }}.png"
-                                    type="button" class="btn btn-sm btn-alt-primary js-bs-tooltip-enabled me-2" title="Download Barcode">
-                                    <i class="fa fa-fw fa-download"></i>
-                                  </a> --}}
-                                  <a href="{{ route('admin.downloadBarcode', $list_buku->no_barcode) }}"
+
+                                 <a href="{{ route('admin.downloadBarcodeSatuan', $list_buku->id) }}"
                                     class="btn btn-sm btn-alt-primary js-bs-tooltip-enabled me-2"
                                     title="Download Barcode">
                                     <i class="fa fa-fw fa-download"></i>
@@ -160,22 +164,6 @@
                                           <img src="data:image/png;base64,{{ DNS1D::getBarcodePNG($list_buku->no_barcode, 'EAN13', 2, 50, [0,0,0], true) }}" class="img-fluid" alt="barcode"><br>
                                           <small id="detail-barcode"></small>
                                         </div>
-                                        {{-- <div class="border rounded p-2">
-                                          <div><strong>QR Code</strong></div>
-                                          <img src="data:image/png;base64,{{ 
-                                            DNS2D::getBarcodePNG(
-                                            'ISBN: '.$list_buku->isbn."\n".
-                                            'Judul: '.$list_buku->judul."\n".
-                                            'Pengarang: '.$list_buku->pengarang."\n".
-                                            'Penerbit: '.$list_buku->penerbit."\n".
-                                            'Tahun Terbit: '.$list_buku->tahun_terbit."\n".
-                                            'Lokasi Rak: '.$list_buku->lokasi_rak."\n".
-                                            'Status: '.$list_buku->status,
-                                            'QRCODE',
-                                            3, 3
-                                            ) 
-                                          }}" class="img-fluid" alt="qrcode">
-                                        </div> --}}
                                       </div>
                                     </div>
                                   </div>
@@ -215,19 +203,19 @@
                                       </div>
                                       <div class="mb-4">
                                         <label class="col-sm-4 col-form-label" for="example-hf-pengarang">Pengarang <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="pengarang" name="pengarang"  placeholder="Masukan pengarang ..." value="{{ $list_buku->pengarang }}" required>
+                                        <input type="text" class="form-control" id="pengarang" name="pengarang"  placeholder="Masukan pengarang ..." value="{{ $list_buku->pengarang }}">
                                       </div>
                                       <div class="mb-4">
                                         <label class="col-sm-4 col-form-label" for="example-hf-penerbit">Penerbit <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="penerbit" name="penerbit"  placeholder="Masukan penerbit ..." value="{{ $list_buku->penerbit }}" required>
+                                        <input type="text" class="form-control" id="penerbit" name="penerbit"  placeholder="Masukan penerbit ..." value="{{ $list_buku->penerbit }}">
                                       </div>
                                       <div class="mb-4">
                                         <label class="col-sm-4 col-form-label" for="example-hf-tahun_terbit">Tahun Terbit <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="tahun_terbit" name="tahun_terbit"  placeholder="Masukan tahun_terbit ..." value="{{ $list_buku->tahun_terbit }}" required>
+                                        <input type="text" class="form-control" id="tahun_terbit" name="tahun_terbit"  placeholder="Masukan tahun_terbit ..." value="{{ $list_buku->tahun_terbit }}">
                                       </div>
                                       <div class="mb-4">
                                         <label class="col-sm-4 col-form-label" for="example-hf-lokasi_rak">Lokasi Rak <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="lokasi_rak" name="lokasi_rak"  placeholder="Masukan lokasi rak ..." value="{{ $list_buku->lokasi_rak }}" required>
+                                        <input type="text" class="form-control" id="lokasi_rak" name="lokasi_rak"  placeholder="Masukan lokasi rak ..." value="{{ $list_buku->lokasi_rak }}">
                                       </div>
                                       <div class="mb-4">
                                         <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
@@ -295,31 +283,30 @@
                           <input type="text" class="form-control" id="judul" name="judul"  placeholder="Masukan judul ..." required>
                         </div>
                         <div class="mb-4">
-                            <label class="col-sm-4 col-form-label" for="example-hf-pengarang">Pengarang <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="pengarang" name="pengarang"  placeholder="Masukan pengarang ..." required>
+                            <label class="col-sm-4 col-form-label" for="example-hf-pengarang">Pengarang </label>
+                            <input type="text" class="form-control" id="pengarang" name="pengarang"  placeholder="Masukan pengarang ...">
                           </div>
                           <div class="mb-4">
-                            <label class="col-sm-4 col-form-label" for="example-hf-penerbit">Penerbit <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="penerbit" name="penerbit"  placeholder="Masukan penerbit ..." required>
+                            <label class="col-sm-4 col-form-label" for="example-hf-penerbit">Penerbit </label>
+                            <input type="text" class="form-control" id="penerbit" name="penerbit"  placeholder="Masukan penerbit ...">
                           </div>
                           
                           <div class="mb-4">
-                            <label class="col-sm-4 col-form-label" for="example-hf-tahun_terbit">Tahun Terbit <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="tahun_terbit" name="tahun_terbit"  placeholder="Masukan tahun_terbit ..." required>
+                            <label class="col-sm-4 col-form-label" for="example-hf-tahun_terbit">Tahun Terbit </label>
+                            <input type="text" class="form-control" id="tahun_terbit" name="tahun_terbit"  placeholder="Masukan tahun_terbit ...">
                           </div>
                           
                           <div class="mb-4">
                             <label class="col-sm-4 col-form-label" for="example-hf-lokasi_rak">Lokasi Rak <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="lokasi_rak" name="lokasi_rak"  placeholder="Masukan lokasi rak ..." required>
+                            <input type="text" class="form-control" id="lokasi_rak" name="lokasi_rak"  placeholder="Masukan lokasi rak ...">
                           </div>
-                        <div class="mb-4">
-                            <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
-                            <select id="status" name="status" class="form-select select-search instructor" required>
-                              <option value="" selected disabled>Pilih Status</option>
-                              <option value="Tersedia">Tersedia</option>
-                              <option value="Dipinjam">Dipinjam</option>
-                            </select>
+                          <div class="mb-4">
+                            <label class="col-sm-4 col-form-label" for="stok">Stok <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="stok" name="stok" value="1" placeholder="Masukan jumlah stok ..." required min="1">
                           </div>
+            
+                          <!-- Hidden field untuk status default -->
+                          <input type="hidden" name="status" value="Tersedia">
                   </div>
                 </div>
                 <div class="block-content block-content-full text-end bg-body">
@@ -336,17 +323,19 @@
     </main>
     @include('admin.layouts.footer')
 </div>
-      {{-- <script src="{{ asset('assets/oneui/js/lib/jquery.min.js') }}"></script>
-      <script src="{{ asset('assets/oneui/js/plugins/select2/js/select2.full.min.js') }}""></script>
-      <script src="{{ asset('assets/oneui/s/plugins/jquery-validation/jquery.validate.min.js') }}"></script>
-      <script src="{{ asset('assets/oneui/js/plugins/jquery-validation/additional-methods.js') }}"></script>
-      <script src="{{ asset('assets/oneui/js/pages/be_forms_validation.min.js') }}"></script> --}}
       <script>
-        document.getElementById('fileInput').addEventListener('change', function() {
-          if(this.files.length > 0){
-            document.getElementById('importForm').submit();
-          }
-        });
+        document.addEventListener('DOMContentLoaded', function() {
+  const fileInput = document.getElementById('fileInput');
+  if (fileInput) {
+    fileInput.addEventListener('change', function() {
+      if (this.files.length > 0) {
+        document.getElementById('importForm').submit();
+      }
+    });
+  } else {
+    console.error("fileInput belum ditemukan di DOM!");
+  }
+});
 
         function confirmationHapusData(url) {
             Swal.fire({
@@ -365,6 +354,91 @@
                 }
             })
         }
+
+        const selectAll = document.getElementById('select-all');
+        const checkboxes = document.querySelectorAll('.checkbox-buku');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const selectedCount = document.getElementById('selectedCount');
+
+        function getSelectedBooks() {
+          return JSON.parse(localStorage.getItem('selectedBooks') || '[]');
+        }
+
+        function saveSelectedBooks(ids) {
+          localStorage.setItem('selectedBooks', JSON.stringify(ids));
+        }
+
+        function toggleDownloadBtn() {
+          let ids = getSelectedBooks();
+          downloadBtn.disabled = ids.length === 0;
+          selectedCount.textContent = ids.length > 0 ? ids.length + " buku dipilih" : "";
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+          let selected = getSelectedBooks();
+
+          // tandai yang sudah pernah dipilih
+          checkboxes.forEach(cb => {
+            if (selected.includes(cb.value)) {
+                cb.checked = true;
+            }
+            cb.addEventListener('change', () => {
+                let ids = getSelectedBooks();
+                if (cb.checked) {
+                    if (!ids.includes(cb.value)) ids.push(cb.value);
+                } else {
+                    ids = ids.filter(id => id !== cb.value);
+                    selectAll.checked = false;
+                }
+                saveSelectedBooks(ids);
+                toggleDownloadBtn();
+            });
+          });
+
+          // select all (halaman aktif)
+          if (selectAll) {
+            selectAll.addEventListener('change', function(e) {
+                let ids = getSelectedBooks();
+                checkboxes.forEach(cb => {
+                    cb.checked = e.target.checked;
+                    if (e.target.checked) {
+                        if (!ids.includes(cb.value)) ids.push(cb.value);
+                    } else {
+                        ids = ids.filter(id => id !== cb.value);
+                    }
+                });
+                saveSelectedBooks(ids);
+                toggleDownloadBtn();
+            });
+          }
+
+          toggleDownloadBtn();
+        });
+
+        // inject semua ID saat submit
+        document.getElementById('bulkDownloadForm').addEventListener('submit', function(e) {
+          let ids = getSelectedBooks();
+          if (ids.length === 0) {
+            e.preventDefault();
+            alert('Pilih minimal 1 buku!');
+            return;
+          }
+
+          // hapus input hidden lama
+          document.querySelectorAll('input[name="selected[]"][type="hidden"]').forEach(el => el.remove());
+
+          // tambahkan input hidden
+          ids.forEach(id => {
+            let input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'selected[]';
+            input.value = id;
+            this.appendChild(input);
+          });
+
+          // kalau mau kosongkan setelah submit:
+          // localStorage.removeItem('selectedBooks');
+        });
       </script>
 </div>
 @endsection

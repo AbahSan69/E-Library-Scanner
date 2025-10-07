@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class Buku extends Model
 {
     protected $table = 'buku';
-    protected $fillable = ['no_barcode', 'isbn', 'judul','pengarang','penerbit','tahun_terbit','lokasi_rak','status'];
+    protected $fillable = ['no_barcode', 'isbn', 'judul','pengarang','penerbit','tahun_terbit','lokasi_rak','type','stok','status'];
 
     public function peminjaman()
     {
-        return $this->hasMany(Peminjaman::class);
+        return $this->hasMany(DetailPeminjaman::class);
     }
 
     protected static function booted()

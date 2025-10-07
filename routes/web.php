@@ -15,7 +15,7 @@ use App\Http\Controllers\Petugas\SiswaController as PetugasSiswaController;
 use App\Http\Controllers\Petugas\PeminjamanController as PetugasPeminjamanController;
 use App\Http\Controllers\Petugas\PengembalianController as PetugasPengembalianController;
 use App\Http\Controllers\Petugas\DashboardController as PetugasDashboardController;
-
+use App\Models\Peminjaman;
 
 Route::get('/', [AuthController::class, 'index'])->name('halaman_login');
 Route::post('/', [AuthController::class, 'login'])->name('login');
@@ -32,10 +32,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/cetakPdf/{id}', [BukuController::class, 'cetakPdf'])->name('cetakPdf');
         Route::post('/import', [BukuController::class, 'import_excel'])->name('import');
         Route::get('/downloadBarcode/{no_barcode}', [BukuController::class, 'downloadBarcode'])->name('downloadBarcode');
+        Route::post('/admin/download-barcode', [BukuController::class, 'downloadBulkBarcode'])->name('downloadBulkBarcode');
+        Route::get('downloadBarcodeSatuan/{id}', [BukuController::class, 'downloadBarcodeSatuan'])->name('downloadBarcodeSatuan');
 
         //Siswa
         Route::get('/siswa', [SiswaController::class, 'index'])->name('siswa');
         Route::post('/simpan_siswa', [SiswaController::class, 'simpan_siswa'])->name('simpan_siswa');
+        Route::post('/import_siswa', [SiswaController::class, 'import_excel'])->name('import_siswa');
         Route::post('/edit_siswa', [SiswaController::class, 'edit_siswa'])->name('edit_siswa');
         Route::get('/hapus_siswa/{id}', [SiswaController::class, 'hapus_siswa'])->name('hapus_siswa');
         
@@ -46,6 +49,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/hapus_peminjaman/{id}', [PeminjamanController::class, 'hapus_peminjaman'])->name('hapus_peminjaman');
         Route::get('/cariSiswa', [PeminjamanController::class, 'cariSiswa'])->name('cariSiswa');
         Route::post('/export', [PeminjamanController::class, 'export_pinjaman'])->name('export');
+        Route::get('/get-buku/{kode}', [PeminjamanController::class, 'show'])->name('get-buku');
+        Route::get('/tambah_peminjaman', [PeminjamanController::class, 'coba'])->name('coba');
+
 
         // web.php
         Route::get('/siswa/search', [PeminjamanController::class, 'search'])->name('siswa.search');
@@ -54,6 +60,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/pengembalian', [PengembalianController::class, 'index'])->name('pengembalian');
         Route::get('/cariBarcode/{barcode}', [PengembalianController::class, 'cariBarcode'])->name('cariBarcode');
         Route::post('/simpan_pengembalian', [PengembalianController::class, 'simpan_pengembalian'])->name('simpan_pengembalian');
+        Route::get('/get-buku-kembali/{kode}', [PengembalianController::class, 'show'])->name('get-buku-kembali');
     
         //Akun
         Route::get('/akun', [AkunController::class, 'index'])->name('akun');

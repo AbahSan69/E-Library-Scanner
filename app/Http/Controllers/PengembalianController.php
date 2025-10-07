@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\Buku;
 use App\Models\Peminjaman;
+use App\Models\DetailPeminjaman;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -45,46 +46,114 @@ class PengembalianController extends Controller
 
     public function simpan_pengembalian(Request $request)
     {
+        $request->validate([
+            'siswa_id' => 'required|exists:siswa,id',
+            'barcodes' => 'required',
+        ]);
+
+        $barcodes = json_decode($request->barcodes, true);
+        $siswaId = $request->siswa_id;
+
+        $gagal = [];  // tampung buku yang gagal diproses
+
+        DB::beginTransaction();
+
         try {
-            DB::beginTransaction();
-            // ✅ Ambil data peminjaman
-            $pinjam = Peminjaman::find($request->id);
+            foreach ($barcodes as $item) {
+                $kode = $item['kode'];
+                $qty  = isset($item['qty']) && $item['qty'] > 0 ? (int)$item['qty'] : 1;
 
-            if (!$pinjam) {
-                return back()->with('toast_error', 'Data peminjaman tidak ditemukan!');
+                // ✅ Cari buku
+                $buku = Buku::where('no_barcode', $kode)->first();
+                if (!$buku) {
+                    $gagal[] = "Barcode {$kode} tidak ditemukan di database buku";
+                    continue;
+                }
+
+                // ✅ Cari detail peminjaman aktif untuk siswa ini dan buku ini
+                $detail = DetailPeminjaman::where('buku_id', $buku->id)
+                    ->where('status', 'Dipinjam')
+                    ->whereHas('peminjaman', function ($q) use ($siswaId) {
+                        $q->where('siswa_id', $siswaId)
+                        ->where('status', 'Dipinjam');
+                    })
+                    ->first();
+
+                if (!$detail) {
+                    $gagal[] = "{$buku->judul} ❌ tidak ditemukan pada peminjaman aktif siswa ini";
+                    continue;
+                }
+
+                // ✅ Pastikan qty yang dikembalikan tidak melebihi yang dipinjam
+                if ($qty > $detail->qty) {
+                    $gagal[] = "Qty pengembalian untuk '{$buku->judul}' melebihi qty yang dipinjam ({$detail->qty})";
+                    continue;
+                }
+
+                // ✅ Tambahkan stok kembali
+                $buku->increment('stok', $qty);
+
+                // ✅ Update detail peminjaman
+                if ($qty == $detail->qty) {
+                    // semua qty dikembalikan → ubah status ke Kembali
+                    $detail->update([
+                        'status' => 'Kembali',
+                        'tanggal_kembali' => now(),
+                    ]);
+                } else {
+                    // hanya sebagian dikembalikan → kurangi qty
+                    $detail->decrement('qty', $qty);
+                }
+
+                // ✅ Update status buku jadi Tersedia
+                $buku->update([
+                    'status' => 'Tersedia',
+                ]);
+
+                // ✅ Cek apakah semua detail dalam peminjaman ini sudah kembali
+                $peminjaman = $detail->peminjaman;
+                $masihDipinjam = $peminjaman->detail()
+                    ->where('status', 'Dipinjam')
+                    ->count();
+
+                if ($masihDipinjam === 0) {
+                    $peminjaman->update(['status' => 'Kembali']);
+                }
             }
-
-            // ✅ Ambil data buku berdasarkan peminjaman
-            $buku = Buku::find($pinjam->buku_id);
-
-            if (!$buku) {
-                return back()->with('toast_error', 'Data buku tidak ditemukan!');
-            }
-
-            // ✅ Cek status
-            if ($pinjam->status !== 'Dipinjam') {
-                return back()->with('toast_error', 'Buku ini tidak dalam status dipinjam!');
-            }
-
-            // ✅ Update status peminjaman & buku
-            $pinjam->update([
-                'status'          => 'Dikembalikan',
-            ]);
-
-            $buku->update([
-                'status' => 'Tersedia',
-            ]);
 
             DB::commit();
 
-            return redirect()->route('admin.peminjaman') // pastikan route sesuai
-                         ->with('toast_success', 'Pengembalian berhasil disimpan!');
+            if (count($gagal) > 0) {
+                return redirect()->route('admin.pengembalian')
+                    ->with('toast_success', 'Sebagian pengembalian berhasil ✅')
+                    ->with('toast_warning', implode('<br>', $gagal));
+            }
+
+            return redirect()->route('admin.pengembalian')
+                ->with('toast_success', 'Semua buku berhasil dikembalikan ✅');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()
-                         ->with('toast_error', 'Terjadi kesalahan: ' . $e->getMessage());
+            return redirect()->back()->with('toast_error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 
+
+    public function show($kode)
+    {
+        $buku = Buku::where('no_barcode', $kode)->first();
+
+        if ($buku) {
+            return response()->json([
+                'judul' => $buku->judul,
+                'pengarang' => $buku->pengarang ?? null,
+                'tahun' => $buku->tahun_terbit ?? null,
+            ]);
+        }
+
+        return response()->json([
+            'error' => 'Buku tidak ditemukan'
+        ], 404);
+    }
 
 }

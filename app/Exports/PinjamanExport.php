@@ -21,7 +21,7 @@ class PinjamanExport implements FromCollection, WithHeadings
             return [
                 'ID'              => $peminjaman->id,
                 'Nama Peminjam'   => $peminjaman->siswa->nama ?? '-',
-                'Judul Buku'      => $peminjaman->buku->judul ?? '-',
+                'Judul Buku' => $peminjaman->detail->pluck('buku.judul')->implode(', '),
                 'Tanggal Pinjam'  => $peminjaman->tanggal_pinjam,
                 'Tanggal Kembali' => $peminjaman->tanggal_kembali,
                 'Status'          => $peminjaman->status,

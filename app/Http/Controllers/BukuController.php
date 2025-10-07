@@ -29,7 +29,7 @@ class BukuController extends Controller
               ->orWhere('penerbit', 'like', '%' . $request->q . '%');
         }
 
-        $buku = $query->orderBy('id', 'desc')->paginate(10);
+        $buku = $query->orderBy('id', 'desc')->paginate(25);
         $total_buku = $query->count();
 
         // agar parameter pencarian ikut di pagination
@@ -44,11 +44,6 @@ class BukuController extends Controller
         $validator = Validator::make($request->all(), [
             'isbn'        => 'nullable|string|unique:buku,isbn',
             'judul'       => 'required|string',
-            'pengarang'   => 'required|string',
-            'penerbit'    => 'required|string',
-            'tahun_terbit'=> 'required|digits:4',
-            'lokasi_rak'  => 'required|string',
-            'status'      => 'required|in:Tersedia,Dipinjam',
         ]);
 
         if ($validator->fails()) {
@@ -94,11 +89,6 @@ class BukuController extends Controller
         $validator = Validator::make($request->all(), [
             'judul' => 'required',
             'isbn' => 'nullable|string',
-            'pengarang' => 'nullable|string',
-            'penerbit' => 'nullable|string',
-            'tahun_terbit' => 'nullable|digits:4',
-            'lokasi_rak' => 'nullable|string',
-            'status' => 'required|in:Tersedia, Dipinjam',
         ]);
 
         if ($validator->fails()) {
@@ -184,19 +174,25 @@ class BukuController extends Controller
     // }
 
     public function import_excel(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv'
-        ]);
+{
+    $request->validate([
+        'file' => 'required|mimes:xlsx,xls,csv'
+    ]);
 
-        try {
-            Excel::import(new BukuImport, $request->file('file'));
-        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-            $failures = $e->failures();
-            return redirect()->route('admin.buku')
-                ->with('toast_error', 'Import gagal pada baris: ' . $failures[0]->row() . ' - ' . $failures[0]->errors()[0]);
-        }
+    try {
+        Excel::import(new BukuImport, $request->file('file'));
+
+        // 🔥 Redirect setelah sukses
+        return redirect()->route('admin.buku')
+            ->with('toast_success', 'Import buku berhasil!');
+            
+    } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+        $failures = $e->failures();
+        return redirect()->route('admin.buku')
+            ->with('toast_error', 'Import gagal pada baris: ' . $failures[0]->row() . ' - ' . $failures[0]->errors()[0]);
     }
+}
+
 
     // public function generate($code)
     // {
@@ -226,41 +222,73 @@ class BukuController extends Controller
 
 
     public function downloadBarcode($no_barcode)
+    {
+        $barcode = new DNS1D();
+        $barcode->setStorPath(storage_path('barcodes/'));
+
+        // Ambil barcode PNG dalam base64
+        $barcodePng = $barcode->getBarcodePNG($no_barcode, 'EAN13', 2, 50, [0,0,0], true);
+        $barcodeImg = Image::make(base64_decode($barcodePng));
+
+        // Tentukan ruang tambahan
+        $labelHeight = 30; // ruang untuk teks di atas
+        $paddingTopBottom = 10;
+        $paddingLeftRight = 30; // ruang kiri kanan
+
+        $canvasWidth  = $barcodeImg->width() + ($paddingLeftRight * 2);
+        $canvasHeight = $labelHeight + $barcodeImg->height() + $paddingTopBottom;
+
+        // Buat canvas putih
+        $canvas = Image::canvas($canvasWidth, $canvasHeight, '#ffffff');
+
+        // Tambahkan teks di atas (center)
+        $canvas->text('SMAN 1 CITEUREUP', $canvasWidth / 2, $labelHeight / 2, function ($font) {
+            $font->file(public_path('fonts/ARIAL.ttf'));
+            $font->size(18);
+            $font->color('#000000');
+            $font->align('center');
+            $font->valign('center');
+        });
+
+        // Tempel barcode di bawah teks dengan padding kiri
+        $canvas->insert($barcodeImg, 'top-left', $paddingLeftRight, $labelHeight);
+
+        // Kembalikan sebagai file download
+        return $canvas->response('png')->withHeaders([
+            'Content-Disposition' => 'attachment; filename="barcode_'.$no_barcode.'.png"'
+        ]);
+    }
+
+    public function downloadBulkBarcode(Request $request)
+    {
+        $ids = $request->input('selected', []);
+
+        if (empty($ids)) {
+            return back()->with('error', 'Tidak ada buku dipilih');
+        }
+
+        $books = Buku::whereIn('id', $ids)->get();
+
+        // Buat HTML view untuk PDF
+        $pdf = PDF::loadView('admin.buku.bulk_barcode', compact('books'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('barcode_buku.pdf');
+    }
+
+    public function downloadBarcodeSatuan($id)
 {
-    $barcode = new DNS1D();
-    $barcode->setStorPath(storage_path('barcodes/'));
+    if (empty($id)) {
+        return back()->with('error', 'Tidak ada buku dipilih');
+    }
 
-    // Ambil barcode PNG dalam base64
-    $barcodePng = $barcode->getBarcodePNG($no_barcode, 'EAN13', 2, 50, [0,0,0], true);
-    $barcodeImg = Image::make(base64_decode($barcodePng));
+    $book = Buku::findOrFail($id);
 
-    // Tentukan ruang tambahan
-    $labelHeight = 30; // ruang untuk teks di atas
-    $paddingTopBottom = 10;
-    $paddingLeftRight = 30; // ruang kiri kanan
+    $pdf = PDF::loadView('admin.buku.barcode', compact('book'))
+    ->setPaper('a4', 'portrait');
 
-    $canvasWidth  = $barcodeImg->width() + ($paddingLeftRight * 2);
-    $canvasHeight = $labelHeight + $barcodeImg->height() + $paddingTopBottom;
-
-    // Buat canvas putih
-    $canvas = Image::canvas($canvasWidth, $canvasHeight, '#ffffff');
-
-    // Tambahkan teks di atas (center)
-    $canvas->text('SMAN 1 CITEUREUP', $canvasWidth / 2, $labelHeight / 2, function ($font) {
-        $font->file(public_path('fonts/ARIAL.ttf'));
-        $font->size(18);
-        $font->color('#000000');
-        $font->align('center');
-        $font->valign('center');
-    });
-
-    // Tempel barcode di bawah teks dengan padding kiri
-    $canvas->insert($barcodeImg, 'top-left', $paddingLeftRight, $labelHeight);
-
-    // Kembalikan sebagai file download
-    return $canvas->response('png')->withHeaders([
-        'Content-Disposition' => 'attachment; filename="barcode_'.$no_barcode.'.png"'
-    ]);
+    return $pdf->download('barcode_buku_' . $book->no_barcode . '.pdf');
 }
+
 
 }
