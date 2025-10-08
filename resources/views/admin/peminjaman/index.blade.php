@@ -70,7 +70,7 @@
                         <!-- Status Dikembalikan -->
                         <a class="dropdown-item fw-medium d-flex align-items-center justify-content-between" href="{{ route('admin.peminjaman', ['status' => 'Dikembalikan']) }}">
                           <span>Status Dikembalikan</span>
-                          @if(request('status') === 'Dikembalikan')
+                          @if(request('status') === 'Kembali')
                             <i class="fa fa-check"></i>
                           @endif
                         </a>

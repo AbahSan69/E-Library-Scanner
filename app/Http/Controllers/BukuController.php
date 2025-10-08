@@ -63,6 +63,7 @@ class BukuController extends Controller
                 'tahun_terbit'=> $request->tahun_terbit,
                 'lokasi_rak'  => $request->lokasi_rak,
                 'status'      => $request->status,
+                'stok'        =>$request->stok,
                 'no_barcode'  => 'temp',
             ]);
 
