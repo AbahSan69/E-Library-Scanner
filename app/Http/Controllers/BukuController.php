@@ -12,6 +12,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\BukuImport;
 use Intervention\Image\ImageManagerStatic as Image;
 use Milon\Barcode\DNS1D;
+use App\Exports\BukuFormatExport;
 use Exception;
 
 
@@ -108,6 +109,7 @@ class BukuController extends Controller
                 'tahun_terbit' => $request->tahun_terbit,
                 'lokasi_rak' => $request->lokasi_rak,
                 'status' => $request->status,
+                'stok' =>$request->stok
             ];
 
             $buku->update($data);
@@ -290,5 +292,9 @@ class BukuController extends Controller
     return $pdf->download('barcode_buku_' . $book->no_barcode . '.pdf');
 }
 
+    public function download_format()
+    {
+        return Excel::download(new BukuFormatExport, 'format_import_buku.xlsx');
+    }
 
 }

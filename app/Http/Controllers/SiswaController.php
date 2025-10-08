@@ -10,6 +10,7 @@ use App\Models\User;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\SiswaImport;
 use Illuminate\Http\Request;
+use App\Exports\SiswaFormatExport;
 use Exception;
 
 class SiswaController extends Controller
@@ -154,5 +155,10 @@ class SiswaController extends Controller
         $siswa->delete();
         return redirect()->route('admin.siswa')
                          ->with('toast_success', 'Data Berhasil Dihapus!');
+    }
+
+    public function download_format()
+    {
+        return Excel::download(new SiswaFormatExport, 'format_import_siswa.xlsx');
     }
 }

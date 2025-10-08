@@ -34,6 +34,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/downloadBarcode/{no_barcode}', [BukuController::class, 'downloadBarcode'])->name('downloadBarcode');
         Route::post('/admin/download-barcode', [BukuController::class, 'downloadBulkBarcode'])->name('downloadBulkBarcode');
         Route::get('downloadBarcodeSatuan/{id}', [BukuController::class, 'downloadBarcodeSatuan'])->name('downloadBarcodeSatuan');
+        Route::get('/format_buku', [BukuController::class, 'download_format'])->name('format_buku');
 
         //Siswa
         Route::get('/siswa', [SiswaController::class, 'index'])->name('siswa');
@@ -41,6 +42,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/import_siswa', [SiswaController::class, 'import_excel'])->name('import_siswa');
         Route::post('/edit_siswa', [SiswaController::class, 'edit_siswa'])->name('edit_siswa');
         Route::get('/hapus_siswa/{id}', [SiswaController::class, 'hapus_siswa'])->name('hapus_siswa');
+        Route::get('/download_format_siswa', [SiswaController::class, 'download_format'])->name('download_format_siswa');
         
         //Peminjaman
         Route::get('/peminjaman', [PeminjamanController::class, 'index'])->name('peminjaman');

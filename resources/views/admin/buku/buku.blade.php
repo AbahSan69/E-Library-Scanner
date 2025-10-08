@@ -32,13 +32,37 @@
                         <i class="fa fa-fw fa-plus"></i>
                         <span>Tambah Data</span>
                       </button>
-                      <form action="{{ route('admin.import') }}" method="POST" enctype="multipart/form-data" id="importForm" class="d-inline">
+                      <div class="dropdown d-inline-block">
+                        <button type="button" class="btn btn-sm btn-alt-success space-x-1" 
+                                id="dropdown-analytics-overview" 
+                                data-bs-toggle="dropdown" 
+                                aria-haspopup="true" 
+                                aria-expanded="false">
+                          <i class="fa fa-fw fa-file-excel"></i>
+                          <span>Import</span>
+                          <i class="fa fa-fw fa-angle-down"></i>
+                        </button>
+                      
+                        <div class="dropdown-menu dropdown-menu-end fs-sm" 
+                             aria-labelledby="dropdown-analytics-overview">
+                          <a class="dropdown-item fw-medium" href="{{ route('admin.format_buku') }}"><i class="fa fa-fw fa-download"></i> Download Format</a>
+                          <form action="{{ route('admin.import') }}" method="POST" enctype="multipart/form-data" id="importForm" class="d-inline">
+                            @csrf
+                            <input type="file" name="file" id="fileInput" class="d-none" accept=".xlsx,.xls,.csv" required>
+                            <button type="button" class="dropdown-item fw-medium" title="Import Data" onclick="document.getElementById('fileInput').click();">
+                              <i class="fa fa-fw fa-file-excel"></i>
+                              <span>Import Data</span>
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                      {{-- <form action="{{ route('admin.import') }}" method="POST" enctype="multipart/form-data" id="importForm" class="d-inline">
                         @csrf
                         <input type="file" name="file" id="fileInput" class="d-none" accept=".xlsx,.xls,.csv">
                         <button type="button" class="btn btn-sm btn-alt-success space-x-1" title="Import Data" onclick="document.getElementById('fileInput').click();">
                           <i class="fa fa-fw fa-file-excel"></i>
                         </button>
-                      </form>
+                      </form> --}}
                       <form id="bulkDownloadForm" action="{{ route('admin.downloadBulkBarcode') }}" method="POST" target="_blank" class="d-inline">
                         @csrf
                         <button type="submit" id="downloadBtn" class="btn btn-sm btn-primary" title="Download Barcode Terpilih" disabled>
@@ -216,6 +240,10 @@
                                       <div class="mb-4">
                                         <label class="col-sm-4 col-form-label" for="example-hf-lokasi_rak">Lokasi Rak <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" id="lokasi_rak" name="lokasi_rak"  placeholder="Masukan lokasi rak ..." value="{{ $list_buku->lokasi_rak }}">
+                                      </div>
+                                      <div class="mb-4">
+                                        <label class="col-sm-4 col-form-label" for="stok">Stok <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" id="stok" name="stok" value="1" placeholder="Masukan jumlah stok ..." required min="1" value="{{ $list_buku->stok }}">
                                       </div>
                                       <div class="mb-4">
                                         <label for="status" class="form-label">Status <span class="text-danger">*</span></label>

@@ -32,14 +32,39 @@
                         <i class="fa fa-fw fa-plus"></i>
                         <span>Tambah Data</span>
                       </button>
-                      <form action="{{ route('admin.import_siswa') }}" method="POST" enctype="multipart/form-data" id="importForm" class="d-inline">
+                      <div class="dropdown d-inline-block">
+                        <button type="button" class="btn btn-sm btn-alt-success space-x-1" 
+                                id="dropdown-analytics-overview" 
+                                data-bs-toggle="dropdown" 
+                                aria-haspopup="true" 
+                                aria-expanded="false">
+                          <i class="fa fa-fw fa-file-excel"></i>
+                          <span>Import</span>
+                          <i class="fa fa-fw fa-angle-down"></i>
+                        </button>
+                      
+                        <div class="dropdown-menu dropdown-menu-end fs-sm" 
+                             aria-labelledby="dropdown-analytics-overview">
+                          <a class="dropdown-item fw-medium" href="{{ route('admin.download_format_siswa') }}"><i class="fa fa-fw fa-download"></i> Download Format</a>
+                          <form action="{{ route('admin.import_siswa') }}" method="POST" enctype="multipart/form-data" id="importForm" class="d-inline">
+                            @csrf
+                            <input type="file" name="file" id="fileInput" class="d-none" accept=".xlsx,.xls,.csv" required>
+                            <button type="button" class="dropdown-item fw-medium" title="Import Data" onclick="document.getElementById('fileInput').click();">
+                              <i class="fa fa-fw fa-file-excel"></i>
+                              <span>Import Data</span>
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                      
+                      {{-- <form action="{{ route('admin.import_siswa') }}" method="POST" enctype="multipart/form-data" id="importForm" class="d-inline">
                         @csrf
                         <input type="file" name="file" id="fileInput" class="d-none" accept=".xlsx,.xls,.csv" required>
                         <button type="button" class="btn btn-sm btn-alt-success" title="Import Data" onclick="document.getElementById('fileInput').click();">
                           <i class="fa fa-fw fa-file-excel"></i>
                           <span>Import Data</span>
                         </button>
-                      </form>
+                      </form> --}}
                   </div>
                 </div>
                 <div class="block-content">
