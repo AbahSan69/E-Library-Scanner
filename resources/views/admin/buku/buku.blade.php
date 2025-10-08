@@ -243,7 +243,7 @@
                                       </div>
                                       <div class="mb-4">
                                         <label class="col-sm-4 col-form-label" for="stok">Stok <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" id="stok" name="stok" value="1" placeholder="Masukan jumlah stok ..." required min="1" value="{{ $list_buku->stok }}">
+                                        <input type="number" class="form-control" id="stok" name="stok" placeholder="Masukan jumlah stok ..." required min="1" value="{{ $list_buku->stok }}">
                                       </div>
                                       <div class="mb-4">
                                         <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
