@@ -15,7 +15,7 @@ class SiswaFormatExport implements FromCollection, WithHeadings
                 '1234567890',
                 'Budi Santoso',
                 '10A',
-                'Laki-laki',
+                'L',
                 '2008-05-20',
                 'Jl. Merdeka No. 1',
                 '081234567890',
