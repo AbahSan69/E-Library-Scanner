@@ -4,9 +4,10 @@
     <meta charset="utf-8">
     <title>Barcode Buku</title>
     <style>
+        /* --- Ukuran kertas custom: 14x7 cm --- */
         @page {
-            size: A4;
-            margin: 10mm;
+            size: 14cm 7cm;
+            margin: 0;
         }
 
         body {
@@ -14,83 +15,62 @@
             font-size: 10px;
             margin: 0;
             padding: 0;
-        }
-
-        .page {
-            width: 190mm; /* sekitar A4 dikurangi margin */
-            margin: auto;
+            width: 14cm;
+            height: 7cm;
+            display: flex;
+            justify-content: center;  /* horizontal center */
+            align-items: center;      /* vertical center */
             text-align: center;
         }
 
         .label {
-            display: inline-block;
-            width: 160mm;   /* 16 cm */
-            height: 70mm;   /* 7 cm */
-            padding: 4mm;
-            margin: 2mm 0;
-            text-align: center;
-            vertical-align: top;
-            border: 1px dashed #ccc; /* untuk preview */
+            width: 13cm;
+            height: auto;
+            padding: 0.2cm;
             box-sizing: border-box;
-        }
-
-        .label div {
-            margin: 1mm 0;
+            text-align: center;
         }
 
         .school-name {
             font-size: 12px;
             font-weight: bold;
+            margin-bottom: 2mm;
         }
 
         .book-title {
             font-size: 10px;
             font-weight: 600;
-            max-width: 150mm;
+            margin-bottom: 2mm;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        .barcode {
-            margin-top: 3mm;
-            margin-bottom: 2mm;
-        }
-
         .barcode img {
-            width: 100%;
+            width: 90%; /* supaya tidak keluar dari batas kertas */
             height: auto;
-            max-height: 45mm;
         }
 
         .barcode-number {
-            font-size: 14px;
+            font-size: 12px;
             letter-spacing: 2px;
-        }
-
-        .page-break {
-            page-break-after: always;
-            display: block;
-            clear: both;
+            margin-top: 2mm;
         }
     </style>
 </head>
 <body>
-    <div class="page">
-            <div class="label">
-                <div class="school-name">SMAN 1 CITEUREUP</div>
+    <div class="label">
+        <div class="school-name">SMAN 1 CITEUREUP</div>
 
-                <div class="book-title">{{ $book->judul }}</div>
+        <div class="book-title">{{ $book->judul }}</div>
 
-                <div class="barcode">
-                    <img src="data:image/png;base64,{{ 
-                        DNS1D::getBarcodePNG($book->no_barcode, 'EAN13', 3, 100, [0,0,0], true) 
-                    }}" alt="barcode">
-                </div>
+        <div class="barcode">
+            <img src="data:image/png;base64,{{ 
+                DNS1D::getBarcodePNG($book->no_barcode, 'EAN13', 3, 100, [0,0,0], true) 
+            }}" alt="barcode">
+        </div>
 
-                <div class="barcode-number">{{ $book->no_barcode }}</div>
-            </div>
-
+        <div class="barcode-number">{{ $book->no_barcode }}</div>
     </div>
 </body>
 </html>

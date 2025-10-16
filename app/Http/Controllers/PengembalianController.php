@@ -92,6 +92,15 @@ class PengembalianController extends Controller
 
                 // ✅ Tambahkan stok kembali
                 $buku->increment('stok', $qty);
+                //update buku
+                $buku->refresh();
+
+                // ✅ Update status buku berdasarkan stok
+                if ($buku->stok > 0) {
+                    $buku->update(['status' => 'Tersedia']);
+                } else {
+                    $buku->update(['status' => 'Tidak tersedia']);
+                }
 
                 // ✅ Update detail peminjaman
                 if ($qty == $detail->qty) {
@@ -104,11 +113,6 @@ class PengembalianController extends Controller
                     // hanya sebagian dikembalikan → kurangi qty
                     $detail->decrement('qty', $qty);
                 }
-
-                // ✅ Update status buku jadi Tersedia
-                $buku->update([
-                    'status' => 'Tersedia',
-                ]);
 
                 // ✅ Cek apakah semua detail dalam peminjaman ini sudah kembali
                 $peminjaman = $detail->peminjaman;

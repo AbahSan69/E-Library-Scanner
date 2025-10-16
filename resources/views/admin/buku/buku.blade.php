@@ -77,7 +77,7 @@
                     <table class="table table-vcenter">
                       <thead>
                         <tr class="text-center">
-                          <th style="width: 100px"><input type="checkbox" id="select-all"></th>
+                          <th style="width: 100px"><input type="checkbox" id="select-all"><br><small>Pilih Barcode</small></th>
                           <th style="width: 100px;">
                             No
                           </th>
@@ -249,7 +249,7 @@
                                         <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
                                         <select id="status" name="status" 
                                           class="form-select select-search instructor" 
-                                          {{ (old('status', $list_buku->status ?? '') == 'Dipinjam') ? 'disabled' : '' }} 
+                                          {{-- {{ (old('status', $list_buku->status ?? '') == 'Dipinjam') ? 'disabled' : '' }}  --}}
                                           required>
                                           <option value="" disabled>Pilih Status</option>
                                           <option value="Tersedia" {{ old('status', $list_buku->status ?? '') == 'Tersedia' ? 'selected' : '' }}>Tersedia</option>

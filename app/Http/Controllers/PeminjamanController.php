@@ -114,6 +114,13 @@ class PeminjamanController extends Controller
 
                 // kurangi stok
                 $buku->decrement('stok', $qty);
+                //update buku
+                $buku->refresh();
+                //cek jika stok 0
+                if ($buku->stok <= 0) {
+                    $buku->update(['status' => 'Dipinjam']);
+                }
+
 
                 // simpan ke tabel detail
                 DetailPeminjaman::create([

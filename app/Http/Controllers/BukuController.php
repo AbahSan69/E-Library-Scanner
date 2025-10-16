@@ -272,26 +272,30 @@ class BukuController extends Controller
 
         $books = Buku::whereIn('id', $ids)->get();
 
-        // Buat HTML view untuk PDF
         $pdf = PDF::loadView('admin.buku.bulk_barcode', compact('books'))
-            ->setPaper('a4', 'portrait');
+            ->setPaper('a4', 'portrait'); // tetap A4 agar muat 3 label
 
         return $pdf->download('barcode_buku.pdf');
     }
 
     public function downloadBarcodeSatuan($id)
-{
-    if (empty($id)) {
-        return back()->with('error', 'Tidak ada buku dipilih');
+    {
+        if (empty($id)) {
+            return back()->with('error', 'Tidak ada buku dipilih');
+        }
+
+        $book = Buku::findOrFail($id);
+
+        // Ukuran kertas custom 14x7 cm (dalam points)
+        $customPaper = [0, 0, 14 * 28.35, 7 * 28.35];
+
+        $pdf = PDF::loadView('admin.buku.barcode', compact('book'))
+            ->setPaper($customPaper, 'portrait');
+
+        return $pdf->download('barcode_buku_' . $book->no_barcode . '.pdf');
     }
 
-    $book = Buku::findOrFail($id);
 
-    $pdf = PDF::loadView('admin.buku.barcode', compact('book'))
-    ->setPaper('a4', 'portrait');
-
-    return $pdf->download('barcode_buku_' . $book->no_barcode . '.pdf');
-}
 
     public function download_format()
     {

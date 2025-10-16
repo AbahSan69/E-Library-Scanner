@@ -17,55 +17,55 @@
         }
 
         .page {
-            width: 190mm; /* sekitar A4 dikurangi margin */
+            width: 190mm;
             margin: auto;
             text-align: center;
         }
 
+        /* Label 14 x 7 cm, 3 label per halaman (1 kolom x 3 baris) */
         .label {
-            display: inline-block;
-            width: 160mm;   /* 16 cm */
-            height: 70mm;   /* 7 cm */
+            display: block;
+            width: 140mm;  /* 14 cm */
+            height: 70mm;  /* 7 cm */
             padding: 4mm;
-            margin: 2mm 0;
+            margin: 0 auto 10mm auto;
             text-align: center;
-            vertical-align: top;
-            border: 1px dashed #ccc; /* untuk preview */
+            border: 1px dashed #ccc; /* hapus jika tidak perlu */
             box-sizing: border-box;
-        }
 
-        .label div {
-            margin: 1mm 0;
+            /* Tengah isi label */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         .school-name {
             font-size: 12px;
             font-weight: bold;
+            margin-bottom: 2mm;
         }
 
         .book-title {
             font-size: 10px;
             font-weight: 600;
-            max-width: 150mm;
+            max-width: 120mm;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-        }
-
-        .barcode {
-            margin-top: 3mm;
             margin-bottom: 2mm;
         }
 
         .barcode img {
-            width: 100%;
+            width: 85%;
             height: auto;
-            max-height: 45mm;
+            max-height: 40mm;
         }
 
         .barcode-number {
-            font-size: 14px;
+            font-size: 12px;
             letter-spacing: 2px;
+            margin-top: 2mm;
         }
 
         .page-break {
@@ -94,7 +94,7 @@
             </div>
 
             @php $count++; @endphp
-            @if($count % 4 == 0)
+            @if($count % 3 == 0)
                 <div class="page-break"></div>
                 <div class="page"></div>
             @endif
