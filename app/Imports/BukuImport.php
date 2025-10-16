@@ -36,8 +36,8 @@ class BukuImport implements ToModel, WithHeadingRow, WithValidation,  WithCalcul
     public function rules(): array
     {
         return [
-            '*.isbn'        => 'nullable|unique:buku,isbn',
-            '*.judul'       => 'required|string',
+            '*.isbn'  => 'nullable|distinct|unique:buku,isbn',
+            '*.judul' => 'required|string|distinct|unique:buku,judul',
         ];
     }
 
