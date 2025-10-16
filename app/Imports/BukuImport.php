@@ -21,6 +21,15 @@ class BukuImport implements ToModel, WithHeadingRow, WithValidation,  WithCalcul
 
     public function model(array $row)
     {
+        $exists = Buku::where('judul', $row['judul'] ?? null)
+            ->where('pengarang', $row['pengarang'] ?? null)
+            ->exists();
+
+        if ($exists) {
+            // Lewati baris ini, jangan return model
+            return null;
+        }
+
         return new Buku([
             'isbn'        => $row['isbn'] ?? null,
             'judul'       => $row['judul'],
@@ -37,7 +46,7 @@ class BukuImport implements ToModel, WithHeadingRow, WithValidation,  WithCalcul
     {
         return [
             '*.isbn'  => 'nullable|distinct|unique:buku,isbn',
-            '*.judul' => 'required|string|distinct|unique:buku,judul',
+            '*.judul' => 'required|string',
         ];
     }
 

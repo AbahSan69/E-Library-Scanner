@@ -22,5 +22,19 @@ class Buku extends Model
             $book->no_barcode = generateEAN13($book->id);
             $book->save();
         });
+
+        parent::boot();
+
+        static::saving(function ($model) {
+            // Cek duplikat kombinasi judul + pengarang
+            $exists = self::where('judul', $model->judul)
+                ->where('pengarang', $model->pengarang)
+                ->when($model->exists, fn($q) => $q->where('id', '!=', $model->id))
+                ->exists();
+
+            if ($exists) {
+                throw new \Exception("Buku dengan judul '{$model->judul}' dan pengarang '{$model->pengarang}' sudah ada.");
+            }
+        });
     }
 }

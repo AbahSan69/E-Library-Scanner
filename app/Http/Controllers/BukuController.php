@@ -45,10 +45,22 @@ class BukuController extends Controller
         $validator = Validator::make($request->all(), [
             'isbn'        => 'nullable|string|unique:buku,isbn',
             'judul'       => 'required|string',
+            'pengarang'   => 'required|string',
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
+        }
+
+        // 🔎 Cek kombinasi judul + pengarang unik
+        $exists = Buku::where('judul', $request->judul)
+            ->where('pengarang', $request->pengarang)
+            ->exists();
+
+        if ($exists) {
+            return back()
+                ->with('toast_error', "Buku '{$request->judul}' oleh '{$request->pengarang}' sudah ada.")
+                ->withInput();
         }
 
         DB::beginTransaction();
@@ -56,30 +68,29 @@ class BukuController extends Controller
         try {
             // Simpan buku baru dengan placeholder barcode
             $book = Buku::create([
-                'isbn'        => $request->isbn ?? null,
-                'judul'       => $request->judul,
-                'pengarang'   => $request->pengarang,
-                'penerbit'    => $request->penerbit,
-                'tahun_terbit'=> $request->tahun_terbit,
-                'lokasi_rak'  => $request->lokasi_rak,
-                'status'      => $request->status,
-                'stok'        =>$request->stok,
-                'no_barcode'  => 'temp',
+                'isbn'         => $request->isbn ?? null,
+                'judul'        => $request->judul,
+                'pengarang'    => $request->pengarang,
+                'penerbit'     => $request->penerbit,
+                'tahun_terbit' => $request->tahun_terbit,
+                'lokasi_rak'   => $request->lokasi_rak,
+                'status'       => $request->status,
+                'stok'         => $request->stok,
+                'no_barcode'   => 'temp',
             ]);
 
             // Generate barcode EAN13
-            // $book->no_barcode = getEANBase($book->id);
             $book->no_barcode = generateEAN13($book->id);
             $book->save();
 
             DB::commit();
 
-            return redirect()->route('admin.buku') // ✅ pakai route resource index
-                         ->with('toast_success', 'Data berhasil ditambahkan!');
+            return redirect()->route('admin.buku')
+                ->with('toast_success', 'Data berhasil ditambahkan!');
         } catch (Exception $e) {
             DB::rollBack();
             return redirect()->back()
-                         ->with('toast_error', 'Terjadi kesalahan: '.$e->getMessage());
+                ->with('toast_error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 
@@ -177,24 +188,28 @@ class BukuController extends Controller
     // }
 
     public function import_excel(Request $request)
-{
-    $request->validate([
-        'file' => 'required|mimes:xlsx,xls,csv'
-    ]);
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
 
-    try {
-        Excel::import(new BukuImport, $request->file('file'));
+        try {
+            Excel::import(new BukuImport, $request->file('file'));
 
-        // 🔥 Redirect setelah sukses
-        return redirect()->route('admin.buku')
-            ->with('toast_success', 'Import buku berhasil!');
-            
-    } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
-        $failures = $e->failures();
-        return redirect()->route('admin.buku')
-            ->with('toast_error', 'Import gagal pada baris: ' . $failures[0]->row() . ' - ' . $failures[0]->errors()[0]);
+            return redirect()->route('admin.buku')
+                ->with('toast_success', 'Import buku berhasil!');
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+            return redirect()->route('admin.buku')
+                ->with('toast_error', 'Import gagal pada baris: ' .
+                    $failures[0]->row() . ' - ' . $failures[0]->errors()[0]);
+        } catch (Exception $e) {
+            return redirect()->route('admin.buku')
+                ->with('toast_error', 'Kesalahan: ' . $e->getMessage());
+        }
     }
-}
+
 
 
     // public function generate($code)
