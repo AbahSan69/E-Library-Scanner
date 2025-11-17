@@ -29,9 +29,9 @@ class BukuController extends Controller
               ->orWhere('pengarang', 'like', '%' . $request->q . '%')
               ->orWhere('penerbit', 'like', '%' . $request->q . '%');
         }
-
-        $buku = $query->orderBy('id', 'desc')->paginate(25);
+        
         $total_buku = $query->count();
+        $buku = $query->orderBy('id', 'desc')->paginate(25);
 
         // agar parameter pencarian ikut di pagination
         $buku->appends($request->only('q'));

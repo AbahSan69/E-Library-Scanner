@@ -43,7 +43,7 @@ class AuthController extends Controller
     
         // Jika user ditemukan dan password cocok
         if ($user && Hash::check($request->password, $user->password)) {
-            // Login berhasil, arahkan ke halaman dashboard
+            // Login berhasil, arahkan ke halaman home
             Auth::loginUsingId($user->id);
             return redirect()->intended('/dashboard')->with('toast_success', 'Berhasil login!');
         }

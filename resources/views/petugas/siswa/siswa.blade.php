@@ -55,7 +55,7 @@
                     @foreach ($siswa as $list_siswa)
                     <tbody>
                       <tr>
-                        <td class="text-center">
+                        <td class="fw-semibold fs-sm text-center">
                           {{ $no = $no + 1 }}
                         </td>
                         <td class="fw-semibold fs-sm">

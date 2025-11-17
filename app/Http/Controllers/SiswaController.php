@@ -12,27 +12,43 @@ use App\Imports\SiswaImport;
 use Illuminate\Http\Request;
 use App\Exports\SiswaFormatExport;
 use Exception;
+use Milon\Barcode\DNS1D;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
+use ZipStream\ZipStream;
+use ZipStream\Option\Archive;
+use ZipArchive;
+use Illuminate\Support\Facades\Cache;
 
 class SiswaController extends Controller
 {
     public function index(Request $request)
-    {
-        $query = Siswa::query();
+{
+    $query = Siswa::query();
 
-        // filter pencarian
-        if ($request->has('q') && !empty($request->q)) {
-            $query->where('nama', 'like', '%' . $request->q . '%')
+    // filter pencarian
+    if ($request->has('q') && !empty($request->q)) {
+        $query->where(function($q) use ($request) {
+            $q->where('nama', 'like', '%' . $request->q . '%')
               ->orWhere('nisn', 'like', '%' . $request->q . '%')
               ->orWhere('kelas', 'like', '%' . $request->q . '%');
-        }
-
-        $siswa = $query->orderBy('id', 'desc')->paginate(25);
-        $total_siswa = $query->count();
-        // agar query pencarian ikut di pagination
-        $siswa->appends($request->only('q'));
-
-        return view('admin.siswa.siswa', compact('siswa','total_siswa'));
+        });
     }
+
+    $total_siswa = $query->count();
+    $siswa = $query->orderBy('id', 'desc')->paginate(25);
+    $siswa->appends($request->only('q'));
+
+    // Tambah QR base64 langsung (tanpa simpan file)
+    foreach ($siswa as $s) {
+        $s->qrcode = QrCode::size(80)
+            ->generate($s->nisn);       
+    }
+
+    return view('admin.siswa.siswa', compact('siswa','total_siswa'));
+}
+
 
     public function simpan_siswa(Request $request)
     {
@@ -161,4 +177,164 @@ class SiswaController extends Controller
     {
         return Excel::download(new SiswaFormatExport, 'format_import_siswa.xlsx');
     }
+
+    //QR
+    public function qrSiswa($id)
+    {
+        $siswa = Siswa::findOrFail($id);
+
+        $qr = QrCode::format('svg')
+            ->size(300)
+            ->generate($siswa->nisn);
+
+        return response($qr)
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', 'attachment; filename="'.$siswa->nisn.'.svg"');
+    }
+
+
+    public function qrBulk(Request $request)
+    {
+        $ids = $request->ids;
+
+        if (!$ids || count($ids) == 0) {
+            return back()->with('error', 'Tidak ada data dipilih');
+        }
+
+        $zip = new \ZipArchive;
+        $zipName = 'qr-siswa-' . time() . '.zip';
+        $zipPath = storage_path('app/' . $zipName);
+
+        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === TRUE) {
+
+            foreach ($ids as $id) {
+                $siswa = Siswa::find($id);
+                if (!$siswa) continue;
+
+                // GUNAKAN SVG AGAR TIDAK PERLU IMAGICK
+                $qr = QrCode::format('svg')
+                    ->size(300)
+                    ->generate($siswa->nisn);
+
+                $zip->addFromString($siswa->nisn . '.svg', $qr);
+            }
+
+            $zip->close();
+        }
+
+        return response()->download($zipPath)->deleteFileAfterSend(true);
+    }
+
+    //barcode siswa
+    public function barcodeSiswa($id)
+    {
+        $siswa = Siswa::findOrFail($id);
+
+        $width = 6 * 28.35;   // 6 cm
+        $height = 3 * 28.35;  // 3 cm
+
+        $customPaper = [0, 0, $width, $height];
+
+        $pdf = PDF::loadView('admin.siswa.barcode', compact('siswa'))
+            ->setPaper($customPaper, 'landscape');
+
+            return $pdf->download($siswa->nisn.' - '.$siswa->nama.'.pdf');
+    }
+
+
+    public function barcodeBulk(Request $request)
+    {
+        $ids = $request->input('selected', []);
+
+        if (empty($ids)) {
+            return back()->with('error', 'Tidak ada siswa dipilih');
+        }
+    
+        $siswas = Siswa::whereIn('id', $ids)->get();
+    
+        // folder temp
+        $zipFile = storage_path('app/barcode_bulk.zip');
+        $zip = new \ZipArchive;
+        $zip->open($zipFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+    
+        foreach ($siswas as $siswa) {
+            $pdf = PDF::loadView('admin.siswa.barcode', compact('siswa'))
+                      ->setPaper([0,0, 160, 90]); // ukuran label (sesuaikan)
+    
+            $pdfPath = storage_path("app/barcode_{$siswa->nisn}.pdf");
+            $pdf->save($pdfPath);
+    
+            $zip->addFile($pdfPath, "{$siswa->nisn} - {$siswa->nama}.pdf");
+        }
+    
+        $zip->close();
+    
+        return response()->download($zipFile)->deleteFileAfterSend(true);
+    }
+
+    public function barcodeBatchProgress()
+{
+    return view('admin.siswa.barcode_progress');
+}
+
+public function barcodeBatchStart()
+{
+    Cache::put('barcode_batch_progress', 0);
+
+    $batchSize = 100;
+    $total = Siswa::count();
+    $done = 0;
+
+    // ZIP in-memory
+    $zipName = 'barcode_all_' . time() . '.zip';
+    $zip = new \ZipArchive();
+
+    /** ZIP temporal in-memory */
+    $tempZip = tempnam(sys_get_temp_dir(), 'zip_');
+    $zip->open($tempZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+
+    Siswa::chunk($batchSize, function ($chunk) use (&$done, $total, $zip) {
+        foreach ($chunk as $siswa) {
+
+            // PDF langsung in-memory
+            $pdf = PDF::loadView('admin.siswa.barcode', compact('siswa'))
+                ->setPaper([0, 0, 160, 90]);
+
+            $zip->addFromString(
+                "{$siswa->nisn} - {$siswa->nama}.pdf",
+                $pdf->output()
+            );
+
+            $done++;
+            Cache::put('barcode_batch_progress', ($done / $total) * 100);
+        }
+    });
+
+    $zip->close();
+    Cache::put('barcode_batch_progress', 100);
+    Cache::put('zip_temp_path', $tempZip);
+    Cache::put('zip_name', $zipName);
+
+    return response()->json(['status' => 'done']);
+}
+
+
+public function barcodeBatchCheck()
+{
+    return response()->json([
+        'progress' => Cache::get('barcode_batch_progress', 0)
+    ]);
+}
+
+public function barcodeBatchDownload()
+{
+    $tempZip = Cache::get('zip_temp_path');
+    $zipName = Cache::get('zip_name');
+
+    return response()->download($tempZip, $zipName)->deleteFileAfterSend(true);
+}
+
+
+
+
 }

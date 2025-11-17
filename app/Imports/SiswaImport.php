@@ -27,9 +27,10 @@ class SiswaImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFai
             'nama'          => $row['nama'],
             'kelas'         => $row['kelas'],
             'jenis_kelamin' => $row['jenis_kelamin'],
-            'tanggal_lahir' => is_numeric($row['tanggal_lahir'])
-                ? Carbon::instance(Date::excelToDateTimeObject($row['tanggal_lahir']))->format('Y-m-d')
-                : Carbon::parse($row['tanggal_lahir'])->format('Y-m-d'),
+            // 'tanggal_lahir' => is_numeric($row['tanggal_lahir'])
+            //     ? Carbon::instance(Date::excelToDateTimeObject($row['tanggal_lahir']))->format('Y-m-d')
+            //     : Carbon::parse($row['tanggal_lahir'])->format('Y-m-d'),
+            'tanggal_lahir' => $row['tanggal_lahir'],
             'alamat'        => $row['alamat'],
             'no_hp'         => $row['no_hp'],
             'status'        => $row['status'] ?? 'Aktif',
@@ -39,13 +40,22 @@ class SiswaImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFai
     public function rules(): array
     {
         return [
-            '*.nisn'            => 'unique:siswa,nisn',
-            '*.nama'            => 'required|string',
-            '*.kelas'           => 'required|string',
-            '*.jenis_kelamin'   => 'required|string',
-            '*.tanggal_lahir'   => 'required',
-            '*.alamat'          => 'required|string',
-            '*.no_hp'          => 'required',
+            // NISN: Wajib ada (required), harus unik, dan berupa angka
+            '*.nisn'          => 'required|unique:siswa,nisn|numeric', 
+            
+            // Nama, Kelas, Jenis Kelamin: Wajib ada
+            '*.nama'          => 'required|string|max:150',
+            '*.kelas'         => 'required|string|max:50',
+            '*.jenis_kelamin' => 'required|string|in:Laki-laki,Perempuan', // Contoh validasi nilai spesifik
+            
+            // Tanggal Lahir: Opsional (nullable)
+            '*.tanggal_lahir' => 'nullable|date', 
+            
+            // Alamat: Opsional (nullable)
+            '*.alamat'        => 'nullable|string',
+            
+            // Nomor HP: Opsional (nullable)
+            '*.no_hp'         => 'nullable|string|max:15',
         ];
     }
 

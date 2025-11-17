@@ -43,6 +43,26 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/edit_siswa', [SiswaController::class, 'edit_siswa'])->name('edit_siswa');
         Route::get('/hapus_siswa/{id}', [SiswaController::class, 'hapus_siswa'])->name('hapus_siswa');
         Route::get('/download_format_siswa', [SiswaController::class, 'download_format'])->name('download_format_siswa');
+        Route::get('/qr-siswa/{id}', [SiswaController::class, 'qrSiswa'])->name('qr');
+        Route::post('/qr-siswa-bulk', [SiswaController::class, 'qrBulk'])->name('qr_bulk');
+        //barocde
+        Route::get('/barcode-siswa/{id}', [SiswaController::class, 'barcodeSiswa'])->name('barcode');
+        Route::post('/barcode-siswa-bulk', [SiswaController::class, 'barcodeBulk'])->name('barcode_bulk');
+        Route::get('/barcodeAll', [SiswaController::class, 'barcodeDownloadAll'])->name('barcodeAll');
+        Route::get('/barcode/batch/progress', [SiswaController::class, 'barcodeBatchProgress'])
+            ->name('barcode.batch.progress');
+
+        Route::post('/barcode/batch/start', [SiswaController::class, 'barcodeBatchStart'])
+     ->name('barcode.batch.start');
+
+Route::get('/barcode/batch/check', [SiswaController::class, 'barcodeBatchCheck'])
+     ->name('barcode.batch.check');
+
+Route::get('/barcode/batch/download', [SiswaController::class, 'barcodeBatchDownload'])
+     ->name('barcode.batch.download');
+
+
+
         
         //Peminjaman
         Route::get('/peminjaman', [PeminjamanController::class, 'index'])->name('peminjaman');
@@ -52,6 +72,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/cariSiswa', [PeminjamanController::class, 'cariSiswa'])->name('cariSiswa');
         Route::post('/export', [PeminjamanController::class, 'export_pinjaman'])->name('export');
         Route::get('/get-buku/{kode}', [PeminjamanController::class, 'show'])->name('get-buku');
+        // Tambahkan di web.php atau sejenisnya
+        Route::get('/get-siswa/{nisn}', [PeminjamanController::class, 'show_siswa'])->name('get-siswa'); 
+        // Sesuaikan nama controller dan method
         Route::get('/tambah_peminjaman', [PeminjamanController::class, 'coba'])->name('coba');
 
 

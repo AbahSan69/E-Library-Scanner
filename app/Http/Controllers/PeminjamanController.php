@@ -236,7 +236,7 @@ class PeminjamanController extends Controller
         $siswa = Siswa::where('nama', 'like', "%$query%")
                   ->orWhere('nisn', 'like', "%$query%")
                   ->limit(10)
-                  ->get(['id','nisn','nama']);
+                  ->get(['id','nisn','nama','kelas']);
 
         return response()->json($siswa);
     }
@@ -285,6 +285,27 @@ class PeminjamanController extends Controller
             'error' => 'Buku tidak ditemukan'
         ], 404);
     }
+
+    // App/Http/Controllers/Admin/PeminjamanController.php
+
+public function show_siswa($nisn)
+{
+    // Pastikan model Siswa sudah di-import: use App\Models\Siswa;
+    $siswa = Siswa::where('nisn', trim($nisn))->first(); 
+
+    if ($siswa) {
+        // KEMBALIKAN SEMUA DATA
+        return response()->json([
+            'id'    => $siswa->id, 
+            'nisn'  => $siswa->nisn,
+            'nama'  => $siswa->nama ?? null,
+            'kelas' => $siswa->kelas ?? null, // Pastikan kolom 'kelas' ada di tabel Siswa
+        ], 200);
+    }
+
+    // Jika siswa tidak ditemukan, kembalikan null dengan status 200
+    return response()->json(null, 200);
+}
 
     public function coba()
     {

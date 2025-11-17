@@ -55,6 +55,17 @@
                             </button>
                           </form>
                         </div>
+
+                        <button type="button" id="downloadSelectedBtn" class="btn btn-sm btn-primary shadow-sm border">
+                          <i class="fa fa-download me-1"></i> Download Barcode Terpilih
+                      </button>
+
+                      {{-- <a href="{{ route('admin.barcode.batch.progress') }}" 
+   class="btn btn-sm btn-primary shadow-sm border">
+    <i class="fa fa-download me-1"></i> Download Semua Barcode
+</a> --}}
+
+                      
                       </div>
                       
                       {{-- <form action="{{ route('admin.import_siswa') }}" method="POST" enctype="multipart/form-data" id="importForm" class="d-inline">
@@ -72,22 +83,33 @@
                     <table class="table table-vcenter">
                       <thead>
                         <tr>
-                          <th class="text-center" style="width: 100px;">
-                            No
-                          </th>
-                          <th style="width: 100px;">NISN</th>
-                          <th>Nama Siswa</th>
-                          <th style="width: 100px;">Status</th>
-                          <th class="text-center" style="width: 100px;">Aksi</th>
+                            <th class="text-center" style="width: 50px;">
+                              <input type="checkbox" id="checkAll">
+                            </th>
+                            <th class="text-center" style="width: 70px;">No</th>
+                            <th style="width: 120px;">NISN</th>
+                            <th>Nama Siswa</th>
+                            <th>QR Code</th>
+                            <th style="width: 100px;">Status</th>
+                            <th class="text-center" style="width: 160px;">Aksi</th>
                         </tr>
-                      </thead>
+                        </thead>                        
                       @if ($siswa->count() > 0)
                       @php
                       $no = 0;
                     @endphp
                     @foreach ($siswa as $list_siswa)
+                    @php
+                      $qrPng = DNS2D::getBarcodePNG($list_siswa->nisn, 'QRCODE');
+                      $nisn = $list_siswa->nisn;
+
+                      $barcodePng = (new \Milon\Barcode\DNS1D())->getBarcodePNG($list_siswa->nisn, 'C128');
+                    @endphp
                     <tbody>
                       <tr>
+                        <td class="text-center">
+                          <input type="checkbox" class="checkItem" value="{{ $list_siswa->id }}">
+                      </td>
                         <td class="text-center">
                           {{ $no = $no + 1 }}
                         </td>
@@ -97,6 +119,35 @@
                         <td class="fw-semibold fs-sm">
                             {{ $list_siswa->nama }}
                         </td>
+                        <td class="qr-cell">
+                          {{-- <img 
+                            src="data:image/png;base64,{{ $qrPng }}" 
+                            class="qr-image" 
+                            data-nisn="{{ $list_siswa->nisn }}"
+                            style="width: 80px; height: 80px;"
+                          > --}}
+                          <div style="width:260px; text-align:center; background:white; padding:8px; border-radius:6px;">
+
+                            <!-- Nama Sekolah di atas -->
+                            <div style="font-size:16px; font-weight:600; margin-bottom:6px;">
+                              SMAN 1 CITEUREUP
+                            </div>
+
+                            <!-- Barcode -->
+                            <img 
+                              src="data:image/png;base64,{{ $barcodePng }}"
+                              class="barcode-image"
+                              style="width:180px; display:block; margin:4px auto;"
+                            >
+
+                            <!-- NISN di bawah -->
+                            <div style="font-size:14px; margin-top:2px;">
+                              {{ $list_siswa->nisn }}
+                            </div>
+
+                          </div>
+
+                      </td>                                       
                         <td class="fw-semibold fs-sm">
                           @if ($list_siswa->status == 'Aktif')
                               <span class="fs-xs fw-semibold d-inline-block py-1 px-3 rounded-pill bg-success-light text-success">
@@ -114,6 +165,18 @@
                       </td>                        
                         <td class="text-center">
                           <div class="btn-group">
+                            {{-- <button class="btn btn-sm btn-primary download-qr me-2"
+                                        data-nisn="{{ $list_siswa->nisn }}">
+                                    <i class="fa fa-download"></i>
+                                </button> --}}
+
+                                <button class="btn btn-sm btn-primary download-barcode me-2"
+    data-id="{{ $list_siswa->id }}">
+    <i class="fa fa-download"></i>
+</button>
+
+
+
                             <button type="button" class="btn btn-sm btn-alt-info js-bs-tooltip-enabled me-2" title="Detail" data-bs-toggle="modal" data-bs-target="#modal-block-vcenter-extra-large-detail-{{ $list_siswa->id }}">
                               <i class="fa fa-fw fa-info"></i>
                             </button>
@@ -342,10 +405,9 @@
     @include('admin.layouts.footer')
 </div>
       <script src="{{ asset('assets/oneui/js/lib/jquery.min.js') }}"></script>
-      <script src="{{ asset('assets/oneui/js/plugins/select2/js/select2.full.min.js') }}""></script>
-      <script src="{{ asset('assets/oneui/s/plugins/jquery-validation/jquery.validate.min.js') }}"></script>
-      <script src="{{ asset('assets/oneui/js/plugins/jquery-validation/additional-methods.js') }}"></script>
-      <script src="{{ asset('assets/oneui/js/pages/be_forms_validation.min.js') }}"></script>
+      <script src="{{ asset('assets/oneui/js/plugins/select2/js/select2.full.min.js') }}"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
       <script>
       document.getElementById('fileInput').addEventListener('change', function() {
           if(this.files.length > 0){
@@ -369,6 +431,97 @@
                 }
             })
         }
+      </script>
+      <script>
+        document.getElementById('fileInput').addEventListener('change', function(){
+  if (this.files.length > 0) {
+    document.getElementById('importForm').submit();
+  }
+});
+
+// Download QR Satuan
+// $(document).on("click", ".download-qr", function () {
+
+//     let row = $(this).closest("tr");
+//     let img = row.find(".qr-image")[0];
+//     let nisn = $(this).data("nisn");
+
+//     if (!img) return alert("QR tidak ditemukan!");
+
+//     let a = document.createElement("a");
+//     a.href = img.src;
+//     a.download = `QR_${nisn}.png`;
+//     a.click();
+// });
+
+
+// Download Bulk ZIP QR
+// $("#downloadSelectedBtn").on("click", async function () {
+
+//     let selected = $(".checkItem:checked");
+//     if (selected.length < 1) {
+//         return Swal.fire("Oops!", "Pilih minimal satu siswa!", "warning");
+//     }
+
+//     let zip = new JSZip();
+
+//     for (let cb of selected) {
+//         let row = $(cb).closest("tr");
+//         let nisn = row.find("td:nth-child(3)").text().trim();
+//         let img = row.find(".qr-image")[0];
+
+//         if (!img) continue;
+
+//         let base64 = img.src.split(",")[1];
+
+//         zip.file(`QR_${nisn}.png`, base64, { base64: true });
+//     }
+
+//     zip.generateAsync({ type: "blob" }).then(output => {
+//         saveAs(output, "QR_TERPILIH.zip");
+//     });
+// });
+
+$(document).on("click", ".download-barcode", function () {
+    let id = $(this).data("id");
+    window.location.href = "{{ url('admin/barcode-siswa') }}/" + id;
+});
+
+
+$("#downloadSelectedBtn").on("click", function () {
+    let selected = $(".checkItem:checked");
+
+    if (selected.length < 1) {
+        return Swal.fire("Oops!", "Pilih minimal satu siswa!", "warning");
+    }
+
+    let form = $('<form>', {
+        method: 'POST',
+        action: '/admin/barcode-siswa-bulk'
+    });
+
+    // csrf_token Laravel
+    form.append('<input type="hidden" name="_token" value="{{ csrf_token() }}">');
+
+    selected.each(function () {
+        form.append(
+            $('<input>', {
+                type: 'hidden',
+                name: 'selected[]',
+                value: $(this).val()
+            })
+        );
+    });
+
+    $('body').append(form);
+    form.submit();
+});
+
+// Check All
+$("#checkAll").on("change", function () {
+    $(".checkItem").prop("checked", $(this).prop("checked"));
+});
+
       </script>
 </div>
 @endsection
