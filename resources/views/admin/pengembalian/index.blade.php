@@ -35,6 +35,22 @@
                       <input type="hidden" id="siswa_id" name="siswa_id">
                     </div>
 
+                    <div id="siswa-info-display" class="block block-rounded block-mode-bordered bg-light" style="display:none;">
+                      <div class="block-header p-2 bg-success-light">
+                       <h6 class="block-title fs-sm text-success m-0"><i class="fa fa-user me-1"></i> SISWA TERPILIH</h6>
+                       <div class="block-options">
+                        <button type="button" class="btn-block-option text-danger" onclick="clearSiswa()">
+                         <i class="fa fa-trash me-1"></i> Clear
+                        </button>
+                       </div>
+                      </div>
+                      <div class="block-content fs-sm p-3">
+                       <p class="mb-1"><strong>Nama:</strong> <span id="display-nama"></span></p>
+                       <p class="mb-1"><strong>NISN:</strong> <span id="display-nisn"></span></p>
+                       <p class="mb-0"><strong>Kelas:</strong> <span id="display-kelas"></span></p>
+                      </div>
+                     </div>
+
                     <div class="mb-4" hidden>
                       <label for="barcode" class="form-label">Scan Barcode Buku <span class="text-danger">*</span></label>
                       <input type="text" name="barcode" id="barcode" class="form-control" autofocus>
@@ -93,6 +109,8 @@
   let daftarBarcode = [];
   let buffer = "";
   let scanTimer = null;
+  const NISN_LENGTH = 10; // Asumsi panjang NISN (siswa barcode)
+  const EAN13_LENGTH = 13; // Asumsi panjang EAN13 (buku barcode)
 
   // ✅ Fungsi hitung check digit EAN13
   function hitungCheckDigitEAN13(kode12) {
@@ -106,12 +124,19 @@
 
   // ✅ Listener global — tangkap semua input dari scanner
   document.addEventListener('keydown', function(e) {
-    // Abaikan tombol kontrol
+    const activeElement = document.activeElement;
+
+    // 🛑 KASUS 1 & 2: INPUT FOKUS (SISWA, TANGGAL, QTY)
+    if (activeElement && activeElement.tagName === 'INPUT') {
+      return;
+    }
+
     if (e.key.length !== 1 && e.key !== 'Enter') return;
+    e.preventDefault();
 
     if (e.key === 'Enter') {
-      if (buffer.length >= 12) {
-        prosesScanBarcode(buffer.trim());
+      if (buffer.length >= 10) {
+        prosesScanInputBukuGlobal(buffer.trim());
       }
       buffer = "";
       return;
@@ -122,154 +147,253 @@
     scanTimer = setTimeout(() => buffer = "", 300);
   });
 
-  // ✅ Proses barcode saat scanner selesai
-  function prosesScanBarcode(kode) {
-    // Tambahkan check digit kalau hanya 12 angka
-    if (/^\d{12}$/.test(kode)) {
-      kode += hitungCheckDigitEAN13(kode);
-    }
-
-    if (!/^\d{13}$/.test(kode)) {
-      alert("Barcode tidak valid (harus 12/13 digit angka)!");
-      return;
-    }
-
-    // Jika buku sudah ada → tambah qty
-    const existing = daftarBarcode.find(b => b.kode === kode);
-    if (existing) {
-      existing.qty = (existing.qty || 1) + 1;
-      renderTable();
-      return;
-    }
-
-    // Tambahkan data sementara
-    let index = daftarBarcode.length;
-    daftarBarcode.push({ kode: kode, judul: "-", status: "Loading...", qty: 1 });
-    renderTable();
-
-    // Ambil data buku dari endpoint (pengembalian)
-    fetch(`/admin/get-buku-kembali/${kode}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.judul) {
-          daftarBarcode[index].judul = data.judul;
-          daftarBarcode[index].status = "✅ Valid";
-        } else {
-          daftarBarcode[index].judul = "-";
-          daftarBarcode[index].status = "❌ Tidak ditemukan";
-        }
-        renderTable();
-      })
-      .catch(() => {
-        daftarBarcode[index].status = "❌ Error koneksi";
-        renderTable();
-      });
+  function prosesScanInputBukuGlobal(kode) {
+    kode = kode.replace(/[^0-9]/g, '');
+     
+     if (kode.length === 12) {
+       kode += hitungCheckDigitEAN13(kode.substring(0, 12));
+       prosesScanBarcodeBuku(kode);
+     } else if (kode.length === EAN13_LENGTH) {
+       prosesScanBarcodeBuku(kode);
+     } else {
+       alert("Barcode tidak valid (harus 12/13 digit untuk Buku). Untuk Siswa, silakan klik input dan scan di sana.");
+     }
   }
 
-  // ✅ Render tabel
-  function renderTable() {
-    const tbody = document.querySelector("#tabelBuku tbody");
-    tbody.innerHTML = "";
+  function displaySiswaInfo(data) {
+     const searchInput = document.getElementById('search');
+     const infoDisplay = document.getElementById('siswa-info-display');
+  
+     if (data && data.id) {
+       // Isi input tersembunyi
+       document.getElementById('siswa_id').value = data.id;
+       
+       // Isi area display
+       document.getElementById('display-nisn').textContent = data.nisn || '-';
+       document.getElementById('display-nama').textContent = data.nama || '-';
+       document.getElementById('display-kelas').textContent = data.kelas || '-'; // Membutuhkan kolom 'kelas' dari backend
+       
+       // Sembunyikan input search, tampilkan display info
+       searchInput.style.display = 'none';
+       infoDisplay.style.display = 'block';
+       
+       // Aktifkan submit jika ada buku
+       const validBarcodes = daftarBarcode.filter(b => b.status === "✅ Valid");
+       document.getElementById("btnSubmit").disabled = validBarcodes.length === 0;
+  
+     } else {
+       // Jika data tidak valid/kosong, bersihkan
+       clearSiswa();
+     }
+     $('#result').empty();
+   }
 
-    if (daftarBarcode.length === 0) {
-      tbody.innerHTML = `
-        <tr class="text-center text-muted">
-          <td colspan="6">📚 Belum ada buku yang discan.</td>
-        </tr>
-      `;
-      document.getElementById("btnSubmit").disabled = true;
-    } else {
-      daftarBarcode.forEach((b, i) => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${i + 1}</td>
-            <td>${b.kode}</td>
-            <td>${b.judul}</td>
-            <td>${b.status}</td>
-            <td style="width: 90px;">
-              <input type="number" min="1" class="form-control form-control-sm"
-                value="${b.qty || 1}" onchange="ubahQty(${i}, this.value)">
-            </td>
-            <td>
-              <button type="button" class="btn btn-sm btn-danger" onclick="hapusBarcode(${i})">
-                <i class="fa fa-trash"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      });
-      document.getElementById("btnSubmit").disabled = false;
-    }
+   window.clearSiswa = function() {
+     document.getElementById('siswa_id').value = '';
+     document.getElementById('search').value = '';
+     document.getElementById('search').style.display = 'block';
+     document.getElementById('siswa-info-display').style.display = 'none';
+     document.getElementById("btnSubmit").disabled = true;
+     $('#result').empty();
+     document.getElementById('search').focus(); 
+   };
 
-    // Simpan data ke hidden input
-    document.getElementById("barcodes").value = JSON.stringify(daftarBarcode);
-  }
+   function fetchSiswaByBarcode(nisn) {
+     fetch(`/admin/get-siswa/${nisn}`)
+       .then(res => {
+         if (!res.ok) {
+           if (res.status === 404) {
+             throw new Error(`NISN ${nisn} tidak ditemukan di server (404).`);
+           }
+           throw new Error(`Server error: ${res.status} ${res.statusText}`);
+         }
+         return res.json();
+       })
+       .then(data => {
+         if (data && data.id) {
+           alert(`Siswa ditemukan: ${data.nama} (NISN: ${data.nisn})`);
+           displaySiswaInfo(data); // ⬅️ Panggil fungsi baru
+         } else {
+           alert(`Siswa dengan NISN ${nisn} tidak ditemukan!`);
+           clearSiswa();
+         }
+         $('#result').empty(); 
+       })
+       .catch(error => {
+         console.error(error); 
+         alert("Error koneksi atau server: " + error.message);
+         clearSiswa();
+       });
+   }
 
-  // ✅ Ubah qty manual
-  function ubahQty(i, value) {
-    const val = parseInt(value);
-    daftarBarcode[i].qty = val > 0 ? val : 1;
-    renderTable();
-  }
+   function prosesScanBarcodeBuku(kode) {
+     // ... (Logika proses buku tetap sama) ...
+     const existing = daftarBarcode.find(b => b.kode === kode);
+     if (existing) {
+       if (existing.status === "✅ Valid" && existing.qty < existing.stok) {
+         existing.qty++;
+       } else if (existing.status.startsWith("❌")) {
+         alert(`Barcode ${kode} sudah di-scan, namun statusnya "${existing.status}".`);
+       } else {
+         alert(`Stok buku ini hanya ${existing.stok}. Tidak bisa menambah qty lebih dari stok.`);
+       }
+       renderTable();
+       return;
+     }
+  
+     let index = daftarBarcode.length;
+     daftarBarcode.push({ kode: kode, judul: "-", status: "Loading...", qty: 1, stok: 1 });
+     renderTable();
+  
+     // Ambil data buku via fetch
+     fetch(`/admin/get-buku/${kode}`)
+       .then(res => res.json())
+       .then(data => {
+         if (data && data.judul) {
+           daftarBarcode[index].judul = data.judul;
+           daftarBarcode[index].stok = data.stok || 1;
+           daftarBarcode[index].status = "✅ Valid";
+         } else {
+           daftarBarcode[index].judul = "-";
+           daftarBarcode[index].status = "❌ Tidak ditemukan";
+           daftarBarcode[index].stok = 0;
+         }
+         renderTable();
+       })
+       .catch(() => {
+         daftarBarcode[index].status = "❌ Error koneksi";
+         daftarBarcode[index].stok = 0;
+         renderTable();
+       });
+   }
 
-  // ✅ Hapus item
-  function hapusBarcode(i) {
-    daftarBarcode.splice(i, 1);
-    renderTable();
-  }
+   function renderTable() {
+     const tbody = document.querySelector("#tabelBuku tbody");
+     tbody.innerHTML = "";
+  
+     const validBarcodes = daftarBarcode.filter(b => b.status === "✅ Valid");
+     const siswaTerpilih = document.getElementById('siswa_id').value; // Ambil nilai siswa terpilih
+  
+     if (daftarBarcode.length === 0) {
+       tbody.innerHTML = `
+         <tr class="text-center text-muted">
+           <td colspan="6">📚 Belum ada buku yang discan.</td>
+         </tr>
+       `;
+     } else {
+       // ... (Logika render tabel) ...
+       daftarBarcode.forEach((b, i) => {
+         const isInvalid = b.status.startsWith('❌');
+         const rowClass = isInvalid ? 'table-danger' : '';
+         
+         tbody.innerHTML += `
+           <tr class="${rowClass}">
+             <td>${i + 1}</td>
+             <td>${b.kode}</td>
+             <td>${b.judul}</td>
+             <td>${b.status}</td>
+             <td style="width: 90px;">
+               <input type="number" min="1" max="${b.stok}" class="form-control form-control-sm" 
+                 value="${b.qty || 1}" onchange="ubahQty(${i}, this.value)" ${isInvalid ? 'disabled' : ''}>
+             </td>
+             <td>
+               <button type="button" class="btn btn-sm btn-danger" onclick="hapusBarcode(${i})">
+                 <i class="fa fa-trash"></i>
+               </button>
+             </td>
+           </tr>
+         `;
+       });
+     }
 
-  // ===============================
-  // 🔍 Live Search Siswa (tetap)
-  // ===============================
-  $(document).ready(function(){
-    $('#search').on('keyup', function(){
-      let query = $(this).val();
+     document.getElementById("btnSubmit").disabled = !siswaTerpilih || validBarcodes.length === 0;
+  
+     const finalBarcodes = validBarcodes.map(b => ({
+       kode: b.kode,
+       qty: b.qty,
+     }));
+     document.getElementById("barcodes").value = JSON.stringify(finalBarcodes);
+   }
 
-      if(query.length > 1){
-        $.ajax({
-          url: "{{ route('admin.siswa.search') }}",
-          type: "GET",
-          data: {'q': query},
-          success: function(data){
-            $('#result').empty();
-            if(data.length > 0){
-              $.each(data, function(index, siswa){
-                $('#result').append(
-                  '<li class="list-group-item list-group-item-action" data-id="'+siswa.id+'">'+siswa.nisn+' - '+siswa.nama+'</li>'
-                );
-              });
-            } else {
-              $('#result').append('<li class="list-group-item disabled">Tidak ada hasil</li>');
-            }
-          }
-        });
-      } else {
-        $('#result').empty();
-      }
-    });
+   function ubahQty(i, value) {
+     let qty = parseInt(value);
+     if (qty > daftarBarcode[i].stok) {
+       alert(`Qty tidak boleh lebih dari stok (${daftarBarcode[i].stok})`);
+       qty = daftarBarcode[i].stok;
+     } else if (qty < 1 || isNaN(qty)) {
+       qty = 1;
+     }
+     daftarBarcode[i].qty = qty;
+     renderTable();
+   }
 
-    $(document).on('click', '#result li', function(){
-      let id = $(this).data('id');
-      let text = $(this).text();
+   function hapusBarcode(i) {
+     daftarBarcode.splice(i, 1);
+     renderTable();
+   }
 
-      $('#search').val(text);
-      $('#siswa_id').val(id);
-      $('#result').empty();
-    });
+   $(document).ready(function(){
+     
+     // 🚀 LOGIKA SCAN SISWA / INPUT MANUAL SISWA (TEKAN ENTER)
+     $('#search').on('keydown', function(e){
+       if (e.key === 'Enter') {
+         e.preventDefault(); 
+         const inputVal = $(this).val().trim();
+         
+         if (inputVal.length === NISN_LENGTH && /^\d+$/.test(inputVal)) {
+           fetchSiswaByBarcode(inputVal);
+         } else if (inputVal.length > 0) {
+           const firstItem = $('#result li:first');
+           if (firstItem.length > 0 && !firstItem.hasClass('disabled')) {
+             firstItem.trigger('click');
+           } else {
+             alert("Silakan pilih siswa dari daftar hasil pencarian, atau masukkan/scan NISN 10 digit.");
+           }
+         }
+       }
+     });
 
-    $('#btnPilih').on('click', function(){
-      let siswaText = $('#search').val();
-      let siswaId   = $('#siswa_id').val();
+     $('#search').on('keyup', function(){
+       let query = $(this).val();
+  
+       // Hanya lakukan live search jika input search sedang visible (belum ada siswa terpilih)
+       if($('#siswa-info-display').css('display') === 'none') {
+         if(query.length > 1){
+           $.ajax({
+             url: "{{ route('admin.siswa.search') }}",
+             type: "GET",
+             data: {'q': query},
+             success: function(data){
+               $('#result').empty();
+               if(data.length > 0){
+                 $.each(data, function(index, siswa){
+                   $('#result').append(
+                     '<li class="list-group-item list-group-item-action" data-id="'+siswa.id+'" data-nisn="'+siswa.nisn+'" data-nama="'+siswa.nama+'" data-kelas="'+(siswa.kelas || '-')+'">'+siswa.nisn+' - '+siswa.nama+'</li>'
+                   );
+                 });
+               } else {
+                 $('#result').append('<li class="list-group-item disabled">Tidak ada hasil</li>');
+               }
+             }
+           });
+         } else {
+           $('#result').empty();
+           if(query.length === 0) {
+             clearSiswa(); // Panggil clearSiswa jika input dikosongkan saat live search
+           }
+         }
+       }
+     });
 
-      if(siswaId){
-        $('#siswa_terpilih').val(siswaText); 
-        $('#siswa_terpilih_id').val(siswaId);
-        $('#siswaModal').modal('hide');
-      } else {
-        alert("Silakan pilih siswa dulu!");
-      }
-    });
-  });
+     $(document).on('click', '#result li', function(){
+       let id = $(this).data('id');
+       let nisn = $(this).data('nisn');
+       let nama = $(this).data('nama');
+       let kelas = $(this).data('kelas');
+       
+       displaySiswaInfo({id: id, nisn: nisn, nama: nama, kelas: kelas}); // ⬅️ Panggil fungsi baru
+     });
+   });
 </script>
 
 

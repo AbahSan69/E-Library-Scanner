@@ -89,7 +89,7 @@
                             <th class="text-center" style="width: 70px;">No</th>
                             <th style="width: 120px;">NISN</th>
                             <th>Nama Siswa</th>
-                            <th>QR Code</th>
+                            <th>BarCode</th>
                             <th style="width: 100px;">Status</th>
                             <th class="text-center" style="width: 160px;">Aksi</th>
                         </tr>
