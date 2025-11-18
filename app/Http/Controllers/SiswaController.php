@@ -242,111 +242,45 @@ class SiswaController extends Controller
     }
 
     public function barcodeBulk(Request $request)
-{
-    $ids = $request->input('selected', []);
-
-    if (empty($ids)) {
-        return back()->with('error', 'Tidak ada siswa dipilih');
-    }
-
-    $siswas = Siswa::whereIn('id', $ids)->get();
-
-    // File ZIP sementara di OS temp folder
-    $tempZip = tempnam(sys_get_temp_dir(), 'zip');
-
-    $zip = new \ZipArchive;
-    if ($zip->open($tempZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== TRUE) {
-        return back()->with('error', 'Gagal membuka ZIP');
-    }
-
-    foreach ($siswas as $siswa) {
-
-        $pdf = PDF::loadView('admin.siswa.barcode', compact('siswa'))
-                  ->setPaper([0,0,160,90]);
-
-        $pdfContent = $pdf->output();
-
-        // Nama file aman (tanpa interpolasi)
-        $fileName = $siswa->nisn . ' - ' . $siswa->nama . '.pdf';
-
-        $zip->addFromString($fileName, $pdfContent);
-    }
-
-    $zip->close();
-
-    $zipContent = file_get_contents($tempZip);
-    unlink($tempZip);
-
-    return response($zipContent, 200)
-        ->header('Content-Type', 'application/zip')
-        ->header('Content-Disposition', 'attachment; filename=barcode-siswa-' . time() . '.zip')
-        ->header('Content-Length', strlen($zipContent));
-}
-
-
-    public function barcodeBatchProgress()
-{
-    return view('admin.siswa.barcode_progress');
-}
-
-public function barcodeBatchStart()
-{
-    Cache::put('barcode_batch_progress', 0);
-
-    $batchSize = 100;
-    $total = Siswa::count();
-    $done = 0;
-
-    // ZIP in-memory
-    $zipName = 'barcode_all_' . time() . '.zip';
-    $zip = new \ZipArchive();
-
-    /** ZIP temporal in-memory */
-    $tempZip = tempnam(sys_get_temp_dir(), 'zip_');
-    $zip->open($tempZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
-
-    Siswa::chunk($batchSize, function ($chunk) use (&$done, $total, $zip) {
-        foreach ($chunk as $siswa) {
-
-            // PDF langsung in-memory
-            $pdf = PDF::loadView('admin.siswa.barcode', compact('siswa'))
-                ->setPaper([0, 0, 160, 90]);
-
-            $zip->addFromString(
-                "{$siswa->nisn} - {$siswa->nama}.pdf",
-                $pdf->output()
-            );
-
-            $done++;
-            Cache::put('barcode_batch_progress', ($done / $total) * 100);
+    {
+        $ids = $request->input('selected', []);
+    
+        if (empty($ids)) {
+            return back()->with('error', 'Tidak ada siswa dipilih');
         }
-    });
-
-    $zip->close();
-    Cache::put('barcode_batch_progress', 100);
-    Cache::put('zip_temp_path', $tempZip);
-    Cache::put('zip_name', $zipName);
-
-    return response()->json(['status' => 'done']);
-}
-
-
-public function barcodeBatchCheck()
-{
-    return response()->json([
-        'progress' => Cache::get('barcode_batch_progress', 0)
-    ]);
-}
-
-public function barcodeBatchDownload()
-{
-    $tempZip = Cache::get('zip_temp_path');
-    $zipName = Cache::get('zip_name');
-
-    return response()->download($tempZip, $zipName)->deleteFileAfterSend(true);
-}
-
-
-
+    
+        $siswas = Siswa::whereIn('id', $ids)->get();
+    
+        // File ZIP sementara di OS temp folder
+        $tempZip = tempnam(sys_get_temp_dir(), 'zip');
+    
+        $zip = new \ZipArchive;
+        if ($zip->open($tempZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== TRUE) {
+            return back()->with('error', 'Gagal membuka ZIP');
+        }
+    
+        foreach ($siswas as $siswa) {
+    
+            $pdf = PDF::loadView('admin.siswa.barcode', compact('siswa'))
+                      ->setPaper([0,0,160,90]);
+    
+            $pdfContent = $pdf->output();
+    
+            // Nama file aman (tanpa interpolasi)
+            $fileName = $siswa->nisn . ' - ' . $siswa->nama . '.pdf';
+    
+            $zip->addFromString($fileName, $pdfContent);
+        }
+    
+        $zip->close();
+    
+        $zipContent = file_get_contents($tempZip);
+        unlink($tempZip);
+    
+        return response($zipContent, 200)
+            ->header('Content-Type', 'application/zip')
+            ->header('Content-Disposition', 'attachment; filename=barcode-siswa-' . time() . '.zip')
+            ->header('Content-Length', strlen($zipContent));
+    }
 
 }

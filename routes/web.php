@@ -48,21 +48,6 @@ Route::middleware(['auth'])->group(function () {
         //barocde
         Route::get('/barcode-siswa/{id}', [SiswaController::class, 'barcodeSiswa'])->name('barcode');
         Route::post('/barcode-siswa-bulk', [SiswaController::class, 'barcodeBulk'])->name('barcode_bulk');
-        Route::get('/barcodeAll', [SiswaController::class, 'barcodeDownloadAll'])->name('barcodeAll');
-        Route::get('/barcode/batch/progress', [SiswaController::class, 'barcodeBatchProgress'])
-            ->name('barcode.batch.progress');
-
-        Route::post('/barcode/batch/start', [SiswaController::class, 'barcodeBatchStart'])
-     ->name('barcode.batch.start');
-
-Route::get('/barcode/batch/check', [SiswaController::class, 'barcodeBatchCheck'])
-     ->name('barcode.batch.check');
-
-Route::get('/barcode/batch/download', [SiswaController::class, 'barcodeBatchDownload'])
-     ->name('barcode.batch.download');
-
-
-
         
         //Peminjaman
         Route::get('/peminjaman', [PeminjamanController::class, 'index'])->name('peminjaman');
