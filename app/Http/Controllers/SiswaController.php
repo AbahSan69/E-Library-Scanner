@@ -260,46 +260,93 @@ class SiswaController extends Controller
             return $pdf->download($siswa->nisn.' - '.$siswa->nama.'.pdf');
     }
 
+    // public function barcodeBulk(Request $request)
+    // {
+    //     $ids = $request->input('selected', []);
+    
+    //     if (empty($ids)) {
+    //         return back()->with('error', 'Tidak ada siswa dipilih');
+    //     }
+    
+    //     $siswas = Siswa::whereIn('id', $ids)->get();
+    
+    //     // File ZIP sementara di OS temp folder
+    //     $tempZip = tempnam(sys_get_temp_dir(), 'zip');
+    
+    //     $zip = new \ZipArchive;
+    //     if ($zip->open($tempZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== TRUE) {
+    //         return back()->with('error', 'Gagal membuka ZIP');
+    //     }
+    
+    //     foreach ($siswas as $siswa) {
+    
+    //         $pdf = PDF::loadView('admin.siswa.barcode', compact('siswa'))
+    //                   ->setPaper([0,0,160,90]);
+    
+    //         $pdfContent = $pdf->output();
+    
+    //         // Nama file aman (tanpa interpolasi)
+    //         $fileName = $siswa->nisn . ' - ' . $siswa->nama . '.pdf';
+    
+    //         $zip->addFromString($fileName, $pdfContent);
+    //     }
+    
+    //     $zip->close();
+    
+    //     $zipContent = file_get_contents($tempZip);
+    //     unlink($tempZip);
+    
+    //     return response($zipContent, 200)
+    //         ->header('Content-Type', 'application/zip')
+    //         ->header('Content-Disposition', 'attachment; filename=barcode-siswa-' . time() . '.zip')
+    //         ->header('Content-Length', strlen($zipContent));
+    // }
+
     public function barcodeBulk(Request $request)
-    {
-        $ids = $request->input('selected', []);
-    
-        if (empty($ids)) {
-            return back()->with('error', 'Tidak ada siswa dipilih');
-        }
-    
-        $siswas = Siswa::whereIn('id', $ids)->get();
-    
-        // File ZIP sementara di OS temp folder
-        $tempZip = tempnam(sys_get_temp_dir(), 'zip');
-    
-        $zip = new \ZipArchive;
-        if ($zip->open($tempZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== TRUE) {
-            return back()->with('error', 'Gagal membuka ZIP');
-        }
-    
-        foreach ($siswas as $siswa) {
-    
-            $pdf = PDF::loadView('admin.siswa.barcode', compact('siswa'))
-                      ->setPaper([0,0,160,90]);
-    
-            $pdfContent = $pdf->output();
-    
-            // Nama file aman (tanpa interpolasi)
-            $fileName = $siswa->nisn . ' - ' . $siswa->nama . '.pdf';
-    
-            $zip->addFromString($fileName, $pdfContent);
-        }
-    
-        $zip->close();
-    
-        $zipContent = file_get_contents($tempZip);
-        unlink($tempZip);
-    
-        return response($zipContent, 200)
-            ->header('Content-Type', 'application/zip')
-            ->header('Content-Disposition', 'attachment; filename=barcode-siswa-' . time() . '.zip')
-            ->header('Content-Length', strlen($zipContent));
+{
+    $ids = $request->input('selected', []);
+
+    if (empty($ids)) {
+        return back()->with('error', 'Tidak ada siswa dipilih');
     }
+
+    $siswas = Siswa::whereIn('id', $ids)->get();
+
+    // Folder kerja di storage
+    $workDir = storage_path('app/barcode_tmp');
+    if (!is_dir($workDir)) {
+        mkdir($workDir, 0755, true);
+    }
+
+    $zipPath = $workDir . '/barcode-siswa-' . uniqid() . '.zip';
+
+    $zip = new \ZipArchive;
+    if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+        return back()->with('error', 'Gagal membuat ZIP');
+    }
+
+    foreach ($siswas as $siswa) {
+
+        $pdfPath = $workDir . '/' . $siswa->nisn . ' - ' . $siswa->nama . '.pdf';
+
+        PDF::loadView('admin.siswa.barcode', compact('siswa'))
+            ->setPaper([0, 0, 160, 90])
+            ->save($pdfPath);
+
+        if (file_exists($pdfPath)) {
+            $zip->addFile($pdfPath, basename($pdfPath));
+        }
+    }
+
+    $zip->close();
+
+    // Hapus PDF setelah ZIP dibuat
+    foreach (glob($workDir . '/*.pdf') as $file) {
+        unlink($file);
+    }
+
+    return response()->download($zipPath)->deleteFileAfterSend(true);
+}
+
 
 }
