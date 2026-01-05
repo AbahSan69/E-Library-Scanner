@@ -20,6 +20,59 @@ class SiswaImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFai
 {
     use Importable;
 
+    public function prepareForValidation($data, $index)
+    {
+        // Normalisasi jenis kelamin
+        $data['jenis_kelamin'] = match (strtolower(trim($data['jenis_kelamin'] ?? ''))) {
+            'laki-laki', 'laki laki', 'l' => 'L',
+            'perempuan', 'p' => 'P',
+            default => null,
+        };
+
+        if (!empty($data['tanggal_lahir'])) {
+
+            $text = strtoupper($data['tanggal_lahir']);
+    
+            // Ambil bagian tanggal: "08 JUNI 2010"
+            if (preg_match('/(\d{1,2})\s+(JANUARI|FEBRUARI|MARET|APRIL|MEI|JUNI|JULI|AGUSTUS|SEPTEMBER|OKTOBER|NOVEMBER|DESEMBER)\s+(\d{4})/', $text, $match)) {
+    
+                $bulan = [
+                    'JANUARI' => 'January',
+                    'FEBRUARI' => 'February',
+                    'MARET' => 'March',
+                    'APRIL' => 'April',
+                    'MEI' => 'May',
+                    'JUNI' => 'June',
+                    'JULI' => 'July',
+                    'AGUSTUS' => 'August',
+                    'SEPTEMBER' => 'September',
+                    'OKTOBER' => 'October',
+                    'NOVEMBER' => 'November',
+                    'DESEMBER' => 'December',
+                ];
+    
+                $tanggalString = $match[1].' '.$bulan[$match[2]].' '.$match[3];
+    
+                try {
+                    $data['tanggal_lahir'] = Carbon::parse($tanggalString)->format('Y-m-d');
+                } catch (\Exception $e) {
+                    $data['tanggal_lahir'] = null;
+                }
+    
+            } else {
+                // Kalau format tidak dikenali → gagal validasi
+                $data['tanggal_lahir'] = null;
+            }
+        }
+    
+
+        $data['alamat']        = $data['alamat'] ?? '-';
+        $data['no_hp']         = $data['no_hp'] ?? '-';
+        $data['status']        = $data['status'] ?? 'Aktif';
+
+        return $data;
+    }
+
     public function model(array $row)
     {
         return new Siswa([
@@ -46,7 +99,7 @@ class SiswaImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFai
             // Nama, Kelas, Jenis Kelamin: Wajib ada
             '*.nama'          => 'required|string|max:150',
             '*.kelas'         => 'required|string|max:50',
-            '*.jenis_kelamin' => 'required|string|in:Laki-laki,Perempuan', // Contoh validasi nilai spesifik
+            '*.jenis_kelamin' => 'required', // Contoh validasi nilai spesifik
             
             // Tanggal Lahir: Opsional (nullable)
             '*.tanggal_lahir' => 'nullable|date', 
@@ -69,4 +122,5 @@ class SiswaImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnFai
     {
         // Bisa tulis ke log
     }
+
 }

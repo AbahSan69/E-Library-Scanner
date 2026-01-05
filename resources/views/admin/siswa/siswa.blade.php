@@ -15,15 +15,46 @@
           </div>
           @include('admin.layouts.navbar')
           <div class="content">
-            <form action="{{ route('admin.siswa') }}" method="GET">
-                <div class="input-group">
-                  <input type="text" class="form-control" name="q" placeholder="Cari Siswa" value="{{ request()->q }}">
-                  <!-- Search Icon as Submit Button -->
-                  <button class="input-group-text btn btn-primary" type="submit">
-                    <i class="fa fa-fw fa-search"></i>
-                  </button>
-                </div>
-            </form>
+            @if (session('import_errors'))
+    <div class="alert alert-danger">
+        <strong>Detail kesalahan import:</strong>
+        <ul class="mb-0 mt-2">
+            @foreach (session('import_errors') as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
+<form action="{{ route('admin.siswa') }}" method="GET" class="mb-3">
+  <div class="row g-2">
+      <div class="col-md-5">
+          <input type="text" class="form-control"
+                 name="q"
+                 placeholder="Cari Nama / NISN"
+                 value="{{ request('q') }}">
+      </div>
+
+      <div class="col-md-4">
+          <select name="kelas" class="form-select">
+              <option value="">-- Semua Kelas --</option>
+              @foreach($kelasList as $kelas)
+                  <option value="{{ $kelas }}"
+                      {{ request('kelas') == $kelas ? 'selected' : '' }}>
+                      {{ $kelas }}
+                  </option>
+              @endforeach
+          </select>
+      </div>
+
+      <div class="col-md-3 d-grid">
+          <button class="btn btn-primary" type="submit">
+              <i class="fa fa-fw fa-search me-1"></i> Filter
+          </button>
+      </div>
+  </div>
+</form>
+
             <div class="block block-rounded">
                 <div class="block-header block-header-default">
                   <h3 class="block-title">List Siswa (Total : {{ $total_siswa }}) </h3>
@@ -309,7 +340,10 @@
                       @endif
                     </table>
                     <div class="mt-3">
-                      {{ $siswa->links() }}
+                      @if ($siswa instanceof \Illuminate\Pagination\LengthAwarePaginator)
+    {{ $siswa->links() }}
+@endif
+
                   </div>
                   </div>
                 </div>

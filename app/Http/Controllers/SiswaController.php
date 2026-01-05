@@ -28,26 +28,45 @@ class SiswaController extends Controller
     $query = Siswa::query();
 
     // filter pencarian
-    if ($request->has('q') && !empty($request->q)) {
-        $query->where(function($q) use ($request) {
+    if ($request->filled('q')) {
+        $query->where(function ($q) use ($request) {
             $q->where('nama', 'like', '%' . $request->q . '%')
               ->orWhere('nisn', 'like', '%' . $request->q . '%')
               ->orWhere('kelas', 'like', '%' . $request->q . '%');
         });
     }
 
-    $total_siswa = $query->count();
-    $siswa = $query->orderBy('id', 'desc')->paginate(25);
-    $siswa->appends($request->only('q'));
-
-    // Tambah QR base64 langsung (tanpa simpan file)
-    foreach ($siswa as $s) {
-        $s->qrcode = QrCode::size(80)
-            ->generate($s->nisn);       
+    // filter kelas
+    if ($request->filled('kelas')) {
+        $query->where('kelas', $request->kelas);
     }
 
-    return view('admin.siswa.siswa', compact('siswa','total_siswa'));
+    // daftar kelas untuk dropdown
+    $kelasList = Siswa::select('kelas')
+        ->distinct()
+        ->orderBy('kelas')
+        ->pluck('kelas');
+
+    $total_siswa = $query->count();
+
+    // 👉 JIKA filter kelas → TIDAK paginate
+    if ($request->filled('kelas')) {
+        $siswa = $query->orderBy('id', 'desc')->get();
+    } 
+    // 👉 JIKA TIDAK filter kelas → paginate
+    else {
+        $siswa = $query->orderBy('id', 'desc')->paginate(25);
+        $siswa->appends($request->only('q'));
+    }
+
+    // Tambah QR code (base64)
+    foreach ($siswa as $s) {
+        $s->qrcode = QrCode::size(80)->generate($s->nisn);
+    }
+
+    return view('admin.siswa.siswa', compact('siswa', 'total_siswa', 'kelasList'));
 }
+
 
 
     public function simpan_siswa(Request $request)
