@@ -1,7 +1,7 @@
 <header id="page-header">
   <div class="content-header">
     <div class="d-flex align-items-center">
-      <a class="fw-semibold fs-5 tracking-wider text-dual me-3 d-flex align-items-center" href="index.html">
+      <a class="fw-semibold fs-5 tracking-wider text-dual me-3 d-flex align-items-center" href="{{ route('admin.dashboard') }}">
         <img src="{{ asset('assets/oneui/media/favicons/logo_sman1citeurep.png') }}" alt="Logo SMAN I CITEUREUP" class="me-2" style="height: 32px;">
         SMAN I CITEUREUP
       </a>      
