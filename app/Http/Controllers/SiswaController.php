@@ -60,9 +60,9 @@ class SiswaController extends Controller
     }
 
     // Tambah QR code (base64)
-    foreach ($siswa as $s) {
-        $s->qrcode = QrCode::size(80)->generate($s->nisn);
-    }
+    // foreach ($siswa as $s) {
+    //     $s->qrcode = QrCode::size(80)->generate($s->nisn);
+    // }
 
     return view('admin.siswa.siswa', compact('siswa', 'total_siswa', 'kelasList'));
 }
