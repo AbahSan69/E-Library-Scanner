@@ -120,7 +120,7 @@
                             <th class="text-center" style="width: 70px;">No</th>
                             <th style="width: 120px;">NISN</th>
                             <th>Nama Siswa</th>
-                            {{-- <th>BarCode</th> --}}
+                            <th>BarCode</th>
                             <th style="width: 100px;">Status</th>
                             <th class="text-center" style="width: 160px;">Aksi</th>
                         </tr>
@@ -130,12 +130,12 @@
                       $no = 0;
                     @endphp
                     @foreach ($siswa as $list_siswa)
-                    {{-- @php
+                    @php
                       $qrPng = DNS2D::getBarcodePNG($list_siswa->nisn, 'QRCODE');
                       $nisn = $list_siswa->nisn;
 
                       $barcodePng = (new \Milon\Barcode\DNS1D())->getBarcodePNG($list_siswa->nisn, 'C128');
-                    @endphp --}}
+                    @endphp
                     <tbody>
                       <tr>
                         <td class="text-center">
@@ -150,13 +150,13 @@
                         <td class="fw-semibold fs-sm">
                             {{ $list_siswa->nama }}
                         </td>
-                        {{-- <td class="qr-cell">
-                          <img 
+                        <td class="qr-cell">
+                          {{-- <img 
                             src="data:image/png;base64,{{ $qrPng }}" 
                             class="qr-image" 
                             data-nisn="{{ $list_siswa->nisn }}"
                             style="width: 80px; height: 80px;"
-                          >
+                          > --}}
                           <div style="width:260px; text-align:center; background:white; padding:8px; border-radius:6px;">
 
                             <!-- Nama Sekolah di atas -->
@@ -176,7 +176,7 @@
                               {{ $list_siswa->nisn }}
                             </div>
 
-                          </div> --}}
+                          </div>
 
                       </td>                                       
                         <td class="fw-semibold fs-sm">

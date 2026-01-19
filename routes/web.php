@@ -57,7 +57,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/cariSiswa', [PeminjamanController::class, 'cariSiswa'])->name('cariSiswa');
         Route::post('/export', [PeminjamanController::class, 'export_pinjaman'])->name('export');
         Route::get('/get-buku/{kode}', [PeminjamanController::class, 'show'])->name('get-buku');
-        // Tambahkan di web.php atau sejenisnya
         Route::get('/get-siswa/{nisn}', [PeminjamanController::class, 'show_siswa'])->name('get-siswa'); 
         // Sesuaikan nama controller dan method
         Route::get('/tambah_peminjaman', [PeminjamanController::class, 'coba'])->name('coba');
@@ -71,6 +70,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/cariBarcode/{barcode}', [PengembalianController::class, 'cariBarcode'])->name('cariBarcode');
         Route::post('/simpan_pengembalian', [PengembalianController::class, 'simpan_pengembalian'])->name('simpan_pengembalian');
         Route::get('/get-buku-kembali/{kode}', [PengembalianController::class, 'show'])->name('get-buku-kembali');
+        Route::get('/get-siswa-by-buku/{kodeBuku}', [PengembalianController::class, 'show_siswa_by_buku'])->name('get-siswa-by-buku');
     
         //Akun
         Route::get('/akun', [AkunController::class, 'index'])->name('akun');

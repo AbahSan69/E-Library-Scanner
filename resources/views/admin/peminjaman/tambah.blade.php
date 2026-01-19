@@ -110,7 +110,19 @@
 {{-- Scripts --}}
 <script src="{{ asset('assets/oneui/js/plugins/select2/js/select2.full.min.js') }}"></script>
 <script src="{{ asset('assets/oneui/js/pages/be_forms_validation.min.js') }}"></script>
-
+<script>
+  function toast(icon, title) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: icon,
+      title: title,
+      showConfirmButton: false,
+      timer: 2200,
+      timerProgressBar: true
+    });
+  }
+</script>
 {{-- <script>
   let daftarBarcode = [];
   let buffer = "";
@@ -362,7 +374,12 @@
         } else if (kode.length === EAN13_LENGTH) {
             prosesScanBarcodeBuku(kode);
         } else {
-            alert("Barcode tidak valid (harus 12/13 digit untuk Buku). Untuk Siswa, silakan klik input dan scan di sana.");
+  //           alert("Barcode tidak valid (harus 12/13 digit untuk Buku). Untuk Siswa, silakan klik input dan scan di sana.");
+        Swal.fire({
+          icon: 'warning',
+          title: 'Barcode Tidak Valid!',
+          text: 'Barcode harus 12/13 digit untuk Buku. Untuk Siswa, silakan klik arahkan kursor ke form siswa dan scan di sana.'
+        });
         }
     }
   
@@ -421,17 +438,20 @@
             })
             .then(data => {
                 if (data && data.id) {
-                    alert(`Siswa ditemukan: ${data.nama} (NISN: ${data.nisn})`);
+  //                   alert(`Siswa ditemukan: ${data.nama} (NISN: ${data.nisn})`);
+                    toast('success', `Siswa ditemukan: ${data.nama} (NISN: ${data.nisn})`);
                     displaySiswaInfo(data); // ⬅️ Panggil fungsi baru
                 } else {
-                    alert(`Siswa dengan NISN ${nisn} tidak ditemukan!`);
+  //                   alert(`Siswa dengan NISN ${nisn} tidak ditemukan!`);
+                    toast('error', `NISN ${nisn} tidak ditemukan`);
                     clearSiswa();
                 }
                 $('#result').empty(); 
             })
             .catch(error => {
                 console.error(error); 
-                alert("Error koneksi atau server: " + error.message);
+  //               alert("Error koneksi atau server: " + error.message);
+                toast('error', 'Terjadi kesalahan server');
                 clearSiswa();
             });
     }
@@ -444,9 +464,11 @@
             if (existing.status === "✅ Valid" && existing.qty < existing.stok) {
                 existing.qty++;
             } else if (existing.status.startsWith("❌")) {
-                alert(`Barcode ${kode} sudah di-scan, namun statusnya "${existing.status}".`);
+  //               alert(`Barcode ${kode} sudah di-scan, namun statusnya "${existing.status}".`);
+                toast('info', `Barcode ${kode} sudah discan`);
             } else {
-                alert(`Stok buku ini hanya ${existing.stok}. Tidak bisa menambah qty lebih dari stok.`);
+  //               alert(`Stok buku ini hanya ${existing.stok}. Tidak bisa menambah qty lebih dari stok.`);
+                toast('warning', `Stok hanya ${existing.stok}`);
             }
             renderTable();
             return;
@@ -532,7 +554,8 @@
     function ubahQty(i, value) {
         let qty = parseInt(value);
         if (qty > daftarBarcode[i].stok) {
-            alert(`Qty tidak boleh lebih dari stok (${daftarBarcode[i].stok})`);
+  //           alert(`Qty tidak boleh lebih dari stok (${daftarBarcode[i].stok})`);
+            toast('warning', `Qty maksimal ${daftarBarcode[i].stok}`);
             qty = daftarBarcode[i].stok;
         } else if (qty < 1 || isNaN(qty)) {
             qty = 1;
@@ -565,7 +588,8 @@
                     if (firstItem.length > 0 && !firstItem.hasClass('disabled')) {
                          firstItem.trigger('click');
                     } else {
-                         alert("Silakan pilih siswa dari daftar hasil pencarian, atau masukkan/scan NISN 10 digit.");
+  //                        alert("Silakan pilih siswa dari daftar hasil pencarian, atau masukkan/scan NISN 10 digit.");
+                         toast('info', 'Silakan pilih siswa dari daftar hasil pencarian, atau masukkan/scan NISN 10 digit.');
                     }
                 }
             }

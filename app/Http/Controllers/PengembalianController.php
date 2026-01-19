@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Buku;
 use App\Models\Peminjaman;
 use App\Models\DetailPeminjaman;
+use App\Models\Siswa;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -128,12 +129,12 @@ class PengembalianController extends Controller
             DB::commit();
 
             if (count($gagal) > 0) {
-                return redirect()->route('admin.pengembalian')
+                return redirect()->route('admin.peminjaman')
                     ->with('toast_success', 'Sebagian pengembalian berhasil ✅')
                     ->with('toast_warning', implode('<br>', $gagal));
             }
 
-            return redirect()->route('admin.pengembalian')
+            return redirect()->route('admin.peminjaman')
                 ->with('toast_success', 'Semua buku berhasil dikembalikan ✅');
 
         } catch (\Exception $e) {
@@ -159,5 +160,40 @@ class PengembalianController extends Controller
             'error' => 'Buku tidak ditemukan'
         ], 404);
     }
+
+    public function show_siswa_by_buku($kodeBuku)
+    {
+        // 1️⃣ Cari buku berdasarkan BARCODE
+        $buku = Buku::where('no_barcode', $kodeBuku)->first();
+
+        // ❌ Barcode tidak ditemukan
+        if (!$buku) {
+            return response()->json([], 200);
+        }
+
+        // 2️⃣ Cari siswa yang sedang meminjam buku tsb
+        $siswa = Siswa::whereHas('peminjaman.detail', function ($q) use ($buku) {
+            $q->where('buku_id', $buku->id)
+            ->whereNull('tanggal_kembali'); // hanya yg belum kembali
+        })->get();
+
+        // ❌ Tidak ada peminjam aktif
+        if ($siswa->isEmpty()) {
+            return response()->json([], 200);
+        }
+
+        // 3️⃣ Kirim ARRAY (sesuai JS)
+        return response()->json(
+            $siswa->map(fn ($s) => [
+                'id'    => $s->id,
+                'nisn'  => $s->nisn,
+                'nama'  => $s->nama,
+                'kelas' => $s->kelas ?? '-',
+            ]),
+            200
+        );
+    }
+
+
 
 }
