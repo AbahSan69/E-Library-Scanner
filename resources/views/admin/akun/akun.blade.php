@@ -15,7 +15,7 @@
           </div>
           @include('admin.layouts.navbar')
           <div class="content">
-            <form action="{{ route('admin.siswa') }}" method="GET">
+            <form action="{{ route('admin.akun') }}" method="GET">
                 <div class="input-group">
                   <input type="text" class="form-control" name="search" placeholder="Cari Akun" value="{{ request()->input('search') }}">
                   <!-- Search Icon as Submit Button -->
@@ -26,7 +26,7 @@
             </form>
             <div class="block block-rounded">
                 <div class="block-header block-header-default">
-                  <h3 class="block-title">List Akun (Total : -) </h3>
+                  <h3 class="block-title">List Akun (Total : {{ $total_akun ?? 0 }}) </h3>
                   <div class="block-options">
                     <button type="button" class="btn btn-sm btn-alt-primary js-bs-tooltip-enabled me-1" title="Tambah Data" data-bs-toggle="modal" data-bs-target="#modal-block-vcenter-extra-large-tambah">
                         <i class="fa fa-fw fa-plus"></i>

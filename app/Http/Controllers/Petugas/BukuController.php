@@ -7,13 +7,14 @@ use App\Models\Buku;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Response;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\BukuImport;
 use Intervention\Image\ImageManagerStatic as Image;
 use Milon\Barcode\DNS1D;
+use App\Exports\BukuFormatExport;
 use Exception;
+
 
 class BukuController extends Controller
 {
@@ -28,9 +29,9 @@ class BukuController extends Controller
               ->orWhere('pengarang', 'like', '%' . $request->q . '%')
               ->orWhere('penerbit', 'like', '%' . $request->q . '%');
         }
-
-        $buku = $query->orderBy('id', 'desc')->paginate(10);
+        
         $total_buku = $query->count();
+        $buku = $query->orderBy('id', 'desc')->paginate(25);
 
         // agar parameter pencarian ikut di pagination
         $buku->appends($request->only('q'));
@@ -45,14 +46,21 @@ class BukuController extends Controller
             'isbn'        => 'nullable|string|unique:buku,isbn',
             'judul'       => 'required|string',
             'pengarang'   => 'required|string',
-            'penerbit'    => 'required|string',
-            'tahun_terbit'=> 'required|digits:4',
-            'lokasi_rak'  => 'required|string',
-            'status'      => 'required|in:Tersedia,Dipinjam',
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
+        }
+
+        // 🔎 Cek kombinasi judul + pengarang unik
+        $exists = Buku::where('judul', $request->judul)
+            ->where('pengarang', $request->pengarang)
+            ->exists();
+
+        if ($exists) {
+            return back()
+                ->with('toast_error', "Buku '{$request->judul}' oleh '{$request->pengarang}' sudah ada.")
+                ->withInput();
         }
 
         DB::beginTransaction();
@@ -60,29 +68,29 @@ class BukuController extends Controller
         try {
             // Simpan buku baru dengan placeholder barcode
             $book = Buku::create([
-                'isbn'        => $request->isbn ?? null,
-                'judul'       => $request->judul,
-                'pengarang'   => $request->pengarang,
-                'penerbit'    => $request->penerbit,
-                'tahun_terbit'=> $request->tahun_terbit,
-                'lokasi_rak'  => $request->lokasi_rak,
-                'status'      => $request->status,
-                'no_barcode'  => 'temp',
+                'isbn'         => $request->isbn ?? null,
+                'judul'        => $request->judul,
+                'pengarang'    => $request->pengarang,
+                'penerbit'     => $request->penerbit,
+                'tahun_terbit' => $request->tahun_terbit,
+                'lokasi_rak'   => $request->lokasi_rak,
+                'status'       => $request->status,
+                'stok'         => $request->stok,
+                'no_barcode'   => 'temp',
             ]);
 
             // Generate barcode EAN13
-            // $book->no_barcode = getEANBase($book->id);
             $book->no_barcode = generateEAN13($book->id);
             $book->save();
 
             DB::commit();
 
-            return redirect()->route('petugas.buku') // ✅ pakai route resource index
-                         ->with('toast_success', 'Data berhasil ditambahkan!');
+            return redirect()->route('petugas.buku')
+                ->with('toast_success', 'Data berhasil ditambahkan!');
         } catch (Exception $e) {
             DB::rollBack();
             return redirect()->back()
-                         ->with('toast_error', 'Terjadi kesalahan: '.$e->getMessage());
+                ->with('toast_error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 
@@ -94,11 +102,6 @@ class BukuController extends Controller
         $validator = Validator::make($request->all(), [
             'judul' => 'required',
             'isbn' => 'nullable|string',
-            'pengarang' => 'nullable|string',
-            'penerbit' => 'nullable|string',
-            'tahun_terbit' => 'nullable|digits:4',
-            'lokasi_rak' => 'nullable|string',
-            'status' => 'required|in:Tersedia, Dipinjam',
         ]);
 
         if ($validator->fails()) {
@@ -118,6 +121,7 @@ class BukuController extends Controller
                 'tahun_terbit' => $request->tahun_terbit,
                 'lokasi_rak' => $request->lokasi_rak,
                 'status' => $request->status,
+                'stok' =>$request->stok
             ];
 
             $buku->update($data);
@@ -152,7 +156,7 @@ class BukuController extends Controller
     public function cetak($id)
     {
         $book = Buku::findOrFail($id);
-        return view('admin.buku.cetak', compact('book'));
+        return view('petugas.buku.cetak', compact('book'));
     }
 
     // Download PDF
@@ -164,6 +168,25 @@ class BukuController extends Controller
         return $pdf->download('label-'.$book->no_barcode.'.pdf');
     }
 
+    // public function downloadBarcode($id)
+    // {
+    //     $book = Buku::findOrFail($id);
+
+    //     // Generate barcode base64
+    //     $barcode = DNS1D::getBarcodePNG($book->no_barcode, 'EAN13', 3, 100);
+
+    //     // Konversi base64 ke binary
+    //     $imageData = base64_decode($barcode);
+
+    //     // Nama file
+    //     $fileName = 'barcode_' . $book->no_barcode . '.png';
+
+    //     // Return response sebagai download gambar
+    //     return response($imageData)
+    //         ->header('Content-Type', 'image/png')
+    //         ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+    // }
+
     public function import_excel(Request $request)
     {
         $request->validate([
@@ -172,12 +195,49 @@ class BukuController extends Controller
 
         try {
             Excel::import(new BukuImport, $request->file('file'));
+
+            return redirect()->route('petugas.buku')
+                ->with('toast_success', 'Import buku berhasil!');
+
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = $e->failures();
             return redirect()->route('petugas.buku')
-                ->with('toast_error', 'Import gagal pada baris: ' . $failures[0]->row() . ' - ' . $failures[0]->errors()[0]);
+                ->with('toast_error', 'Import gagal pada baris: ' .
+                    $failures[0]->row() . ' - ' . $failures[0]->errors()[0]);
+        } catch (Exception $e) {
+            return redirect()->route('petugas.buku')
+                ->with('toast_error', 'Kesalahan: ' . $e->getMessage());
         }
     }
+
+
+
+    // public function generate($code)
+    // {
+    //     $barcode = DNS1D::getBarcodePNG($code, 'EAN13', 2, 50, [0,0,0], true);
+
+    //     // Buat image dari base64 barcode
+    //     $barcodeImage = Image::make(base64_decode($barcode));
+
+    //     // Tambah canvas untuk teks
+    //     $canvas = Image::canvas($barcodeImage->width(), $barcodeImage->height() + 30, '#ffffff');
+
+    //     // Teks header
+    //     $canvas->text('SMAN 1 CITEUREUP', $canvas->width() / 2, 20, function($font) {
+    //         $font->file(public_path('fonts/arial.ttf')); // pastikan font ada
+    //         $font->size(18);
+    //         $font->color('#000000');
+    //         $font->align('center');
+    //         $font->valign('top');
+    //     });
+
+    //     // Tempelkan barcode di bawah teks
+    //     $canvas->insert($barcodeImage, 'bottom');
+
+    //     // Response PNG agar bisa langsung download
+    //     return $canvas->response('png');
+    // }
+
 
     public function downloadBarcode($no_barcode)
     {
@@ -216,4 +276,45 @@ class BukuController extends Controller
             'Content-Disposition' => 'attachment; filename="barcode_'.$no_barcode.'.png"'
         ]);
     }
+
+    public function downloadBulkBarcode(Request $request)
+    {
+        $ids = $request->input('selected', []);
+
+        if (empty($ids)) {
+            return back()->with('error', 'Tidak ada buku dipilih');
+        }
+
+        $books = Buku::whereIn('id', $ids)->get();
+
+        $pdf = PDF::loadView('petugas.buku.bulk_barcode', compact('books'))
+            ->setPaper('a4', 'portrait'); // tetap A4 agar muat 3 label
+
+        return $pdf->download('barcode_buku.pdf');
+    }
+
+    public function downloadBarcodeSatuan($id)
+    {
+        if (empty($id)) {
+            return back()->with('error', 'Tidak ada buku dipilih');
+        }
+
+        $book = Buku::findOrFail($id);
+
+        // Ukuran kertas custom 14x7 cm (dalam points)
+        $customPaper = [0, 0, 14 * 28.35, 7 * 28.35];
+
+        $pdf = PDF::loadView('petugas.buku.barcode', compact('book'))
+            ->setPaper($customPaper, 'portrait');
+
+        return $pdf->download('barcode_buku_' . $book->no_barcode . '.pdf');
+    }
+
+
+
+    public function download_format()
+    {
+        return Excel::download(new BukuFormatExport, 'format_import_buku.xlsx');
+    }
+
 }

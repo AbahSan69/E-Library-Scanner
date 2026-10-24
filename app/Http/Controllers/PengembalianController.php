@@ -5,9 +5,11 @@ use App\Models\Buku;
 use App\Models\Peminjaman;
 use App\Models\DetailPeminjaman;
 use App\Models\Siswa;
+use App\Services\FineCalculator;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class PengembalianController extends Controller
@@ -45,7 +47,7 @@ class PengembalianController extends Controller
         ]);
     }
 
-    public function simpan_pengembalian(Request $request)
+    public function simpan_pengembalian(Request $request, FineCalculator $calc)
     {
         $request->validate([
             'siswa_id' => 'required|exists:siswa,id',
@@ -55,7 +57,9 @@ class PengembalianController extends Controller
         $barcodes = json_decode($request->barcodes, true);
         $siswaId = $request->siswa_id;
 
-        $gagal = [];  // tampung buku yang gagal diproses
+        $gagal = [];        // tampung buku yang gagal diproses
+        $infoDenda = [];    // 💰 rincian denda per buku
+        $totalDenda = 0;    // 💰 total denda dari pengembalian ini
 
         DB::beginTransaction();
 
@@ -91,6 +95,16 @@ class PengembalianController extends Controller
                     continue;
                 }
 
+                // 💰 Hitung denda final untuk $qty eksemplar yang dikembalikan SEKARANG
+                //    (dipanggil sebelum qty detail diubah)
+                $denda = $calc->catatPengembalian($detail, $qty, now());
+                if ($denda) {
+                    $totalDenda += $denda->total_denda;
+                    $infoDenda[] = "{$buku->judul}: {$denda->hari_terlambat} hari × {$qty} eks × Rp "
+                        . number_format($denda->tarif_per_hari, 0, ',', '.')
+                        . " = Rp " . number_format($denda->total_denda, 0, ',', '.');
+                }
+
                 // ✅ Tambahkan stok kembali
                 $buku->increment('stok', $qty);
                 //update buku
@@ -110,9 +124,15 @@ class PengembalianController extends Controller
                         'status' => 'Kembali',
                         'tanggal_kembali' => now(),
                     ]);
+
+                    // 💰 tidak ada lagi sisa eksemplar → hapus denda berjalan
+                    $detail->dendaBerjalan()->delete();
                 } else {
                     // hanya sebagian dikembalikan → kurangi qty
                     $detail->decrement('qty', $qty);
+
+                    // 💰 sisa eksemplar tetap berjalan → hitung ulang dengan qty baru
+                    $calc->hitungBerjalan($detail->fresh());
                 }
 
                 // ✅ Cek apakah semua detail dalam peminjaman ini sudah kembali
@@ -127,15 +147,30 @@ class PengembalianController extends Controller
             }
 
             DB::commit();
+            Log::info('SIMPAN PENGEMBALIAN MASUK', $request->all());
+
+            // 💰 gabungkan catatan gagal dan info denda untuk ditampilkan
+            $catatan = $gagal;
+            if ($totalDenda > 0) {
+                $catatan[] = '💰 <b>Denda keterlambatan: Rp ' . number_format($totalDenda, 0, ',', '.') . '</b><br>'
+                    . implode('<br>', $infoDenda)
+                    . '<br>Silakan proses pembayaran di menu Denda.';
+            }
 
             if (count($gagal) > 0) {
                 return redirect()->route('admin.peminjaman')
                     ->with('toast_success', 'Sebagian pengembalian berhasil ✅')
-                    ->with('toast_warning', implode('<br>', $gagal));
+                    ->with('toast_warning', implode('<br>', $catatan));
             }
 
-            return redirect()->route('admin.peminjaman')
+            $redirect = redirect()->route('admin.peminjaman')
                 ->with('toast_success', 'Semua buku berhasil dikembalikan ✅');
+
+            if ($totalDenda > 0) {
+                $redirect->with('toast_warning', implode('<br>', $catatan));
+            }
+
+            return $redirect;
 
         } catch (\Exception $e) {
             DB::rollBack();

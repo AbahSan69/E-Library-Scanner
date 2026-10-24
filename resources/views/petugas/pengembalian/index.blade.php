@@ -1,146 +1,486 @@
 @extends('petugas.layouts.main')
 @section('content')
 <div id="page-container" class="page-header-dark main-content-boxed">
-    @include('petugas.layouts.header')
-    
-    <main id="main-container">
+  @include('petugas.layouts.header')
+  
+  <main id="main-container">
+    <div class="bg-primary-darker">
+      <div class="content py-3">
+        <div class="d-lg-none">
+          <button type="button" class="btn w-100 btn-alt-secondary d-flex justify-content-between align-items-center"
+                  data-toggle="class-toggle" data-target="#main-navigation" data-class="d-none">
+            Menu
+            <i class="fa fa-bars"></i>
+          </button>
+        </div>
+        @include('petugas.layouts.navbar')
 
-      <div class="bg-primary-darker">
-        <div class="content py-3">
-          <div class="d-lg-none">
-            <button type="button" class="btn w-100 btn-alt-secondary d-flex justify-content-between align-items-center" data-toggle="class-toggle" data-target="#main-navigation" data-class="d-none">
-              Menu
-              <i class="fa fa-bars"></i>
-            </button>
-          </div>
-          @include('petugas.layouts.navbar')
-          <div class="content">
-
-            <div class="block block-rounded">
-                <div class="block-header">
-                    <h3 class="block-title">Detail Pengembalian</h3>
-                </div>
-                <div class="block-content block-content-full">
-                    <div class="mb-4">
-                        <label for="barcode" class="form-label">Scan Barcode <span class="text-danger">*</span></label>
-                        <input type="text" name="barcode" id="barcode" class="form-control" autofocus required>
-                        <small class="text-muted">Arahkan scanner ke barcode buku!</small>
-                    </div>
-                    <form action="{{ route('petugas.simpan_pengembalian') }}" method="POST">
-                        @csrf
-                    <!-- Tabel detail (awal hidden) -->
-                    <div id="detail-peminjaman" style="display: none;">
-                        <table class="table table-vcenter">
-                            <tbody>
-                                <input type="hidden" name="id" id="id">
-                                <tr><td class="ps-0 fw-medium">NISN</td><td class="pe-0 fw-medium text-end" id="nisn">-</td></tr>
-                                <tr><td class="ps-0 fw-medium">Nama Peminjam</td><td class="pe-0 fw-medium text-end" id="nama">-</td></tr>
-                                <tr><td class="ps-0 fw-medium">ISBN</td><td class="pe-0 fw-medium text-end" id="isbn">-</td></tr>
-                                <tr><td class="ps-0 fw-medium">Judul</td><td class="pe-0 fw-medium text-end" id="judul">-</td></tr>
-                                <tr><td class="ps-0 fw-medium">Tanggal Pinjam</td><td class="pe-0 fw-medium text-end" id="tanggal_pinjam">-</td></tr>
-                                <tr><td class="ps-0 fw-medium">Tanggal Kembali</td><td class="pe-0 fw-medium text-end" id="tanggal_kembali">-</td></tr>
-                                <tr><td class="ps-0 fw-medium">Status</td><td class="pe-0 fw-medium text-end" id="status"></td>-</tr>
-                                <tr>
-                                    <td></td>
-                                    <td class="pe-0 fw-bold text-end">
-                                        <button type="submit" class="btn btn-sm btn-primary">Simpan Pengembalian</button>
-                                    </td>
-                                </tr>
-                            </tbody>    
-                        </table>
-                    </div>
-                    </form>
-                </div>
+        <div class="content">
+          <div class="block block-rounded">
+            <div class="block-header">
+              <h3 class="block-title">Menu Pengembalian</h3>
             </div>
-            
+            <div class="block-content block-content-full">
+
+              <form action="{{ route('petugas.simpan_pengembalian') }}" method="POST" id="formPeminjaman">
+                @csrf
+
+                <div class="row">
+                  {{-- === KOLOM KIRI === --}}
+                  <div class="col-md-5">
+                    <div class="mb-4">
+                      <label for="siswa" class="form-label">Siswa <span class="text-danger">*</span></label>
+                      <input type="text" id="search" class="form-control" placeholder="Ketik nama atau NISN...">
+                      <ul id="result" class="list-group mt-2"></ul>
+                      <input type="hidden" id="siswa_id" name="siswa_id">
+                    </div>
+
+                    <div id="siswa-info-display" class="block block-rounded block-mode-bordered bg-light" style="display:none;">
+                      <div class="block-header p-2 bg-success-light">
+                       <h6 class="block-title fs-sm text-success m-0"><i class="fa fa-user me-1"></i> SISWA TERPILIH</h6>
+                       <div class="block-options">
+                        <button type="button" class="btn-block-option text-danger" onclick="clearSiswa()">
+                         <i class="fa fa-trash me-1"></i> Clear
+                        </button>
+                       </div>
+                      </div>
+                      <div class="block-content fs-sm p-3">
+                       <p class="mb-1"><strong>Nama:</strong> <span id="display-nama"></span></p>
+                       <p class="mb-1"><strong>NISN:</strong> <span id="display-nisn"></span></p>
+                       <p class="mb-0"><strong>Kelas:</strong> <span id="display-kelas"></span></p>
+                      </div>
+                     </div>
+
+                    <div class="mb-4" hidden>
+                      <label for="barcode" class="form-label">Scan Barcode Buku <span class="text-danger">*</span></label>
+                      <input type="text" name="barcode" id="barcode" class="form-control" autofocus>
+                      <small class="text-muted">Arahkan scanner ke barcode buku</small>
+                    </div>
+                  </div>
+
+                  {{-- === KOLOM KANAN === --}}
+                  <div class="col-md-7">
+                    <div class="table-responsive">
+                      <table class="table table-vcenter" id="tabelBuku">
+                        <thead>
+                          <tr>
+                            <th style="width: 60px;">No</th>
+                            <th style="width: 120px;">Barcode</th>
+                            <th>Judul</th>
+                            <th style="width: 120px;">Status</th>
+                            <th>Qty</th>
+                            <th style="width: 80px;">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr class="text-center text-muted" id="emptyRow">
+                            <td colspan="5">📚 Belum ada buku yang discan.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <input type="hidden" name="barcodes" id="barcodes">
+
+                    <div class="text-end mt-3">
+                      <button type="submit" id="btnSubmit" class="btn btn-primary btn-sm" disabled>
+                        <i class="fa fa-save me-1"></i> Simpan Pengembalian
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  </main>
 
-    </main>
-    @include('petugas.layouts.footer')
+  @include('petugas.layouts.footer')
 </div>
-      {{-- <script src="{{ asset('assets/oneui/js/lib/jquery.min.js') }}"></script> --}}
-      <script src="{{ asset('assets/oneui/js/plugins/select2/js/select2.full.min.js') }}""></script>
-      {{-- <script src="{{ asset('assets/oneui/s/plugins/jquery-validation/jquery.validate.min.js') }}"></script> --}}
-      {{-- <script src="{{ asset('assets/oneui/js/plugins/jquery-validation/additional-methods.js') }}"></script> --}}
-      <script src="{{ asset('assets/oneui/js/pages/be_forms_validation.min.js') }}"></script>
-      <script>
-        document.addEventListener("DOMContentLoaded", function () {
-        
-            // --- Fungsi hitung check digit EAN-13 ---
-            function calculateEAN13CheckDigit(code) {
-                if (code.length !== 12) return null; // hanya untuk 12 digit
-                let sum = 0;
-                for (let i = 0; i < 12; i++) {
-                    let digit = parseInt(code[i], 10);
-                    sum += (i % 2 === 0) ? digit : digit * 3;
-                }
-                return (10 - (sum % 10)) % 10;
+
+{{-- Scripts --}}
+<script src="{{ asset('assets/oneui/js/plugins/select2/js/select2.full.min.js') }}"></script>
+<script src="{{ asset('assets/oneui/js/pages/be_forms_validation.min.js') }}"></script>
+<script>
+  function toast(icon, title) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: icon,
+      title: title,
+      showConfirmButton: false,
+      timer: 2200,
+      timerProgressBar: true
+    });
+  }
+</script>
+<script>
+  let daftarBarcode = [];
+  let buffer = "";
+  let scanTimer = null;
+  const NISN_LENGTH = 10; // Asumsi panjang NISN (siswa barcode)
+  const EAN13_LENGTH = 13; // Asumsi panjang EAN13 (buku barcode)
+
+  // ✅ Fungsi hitung check digit EAN13
+  function hitungCheckDigitEAN13(kode12) {
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+      let digit = parseInt(kode12.charAt(i));
+      sum += (i % 2 === 0) ? digit : digit * 3;
+    }
+    return (10 - (sum % 10)) % 10;
+  }
+
+  // ✅ Listener global — tangkap semua input dari scanner
+  document.addEventListener('keydown', function(e) {
+    const activeElement = document.activeElement;
+
+    // 🛑 KASUS 1 & 2: INPUT FOKUS (SISWA, TANGGAL, QTY)
+    if (activeElement && activeElement.tagName === 'INPUT') {
+      return;
+    }
+
+    if (e.key.length !== 1 && e.key !== 'Enter') return;
+    e.preventDefault();
+
+    if (e.key === 'Enter') {
+      if (buffer.length >= 10) {
+        prosesScanInputBukuGlobal(buffer.trim());
+      }
+      buffer = "";
+      return;
+    }
+
+    buffer += e.key;
+    clearTimeout(scanTimer);
+    scanTimer = setTimeout(() => buffer = "", 300);
+  });
+
+  function prosesScanInputBukuGlobal(kode) {
+    kode = kode.replace(/[^0-9]/g, '');
+     
+     if (kode.length === 12) {
+       kode += hitungCheckDigitEAN13(kode.substring(0, 12));
+       prosesScanBarcodeBuku(kode);
+     } else if (kode.length === EAN13_LENGTH) {
+       prosesScanBarcodeBuku(kode);
+     } else {
+      //  alert("Barcode tidak valid (harus 12/13 digit untuk Buku). Untuk Siswa, silakan klik arahkan kursor ke form siswa dan scan di sana.");
+       Swal.fire({
+        icon: 'warning',
+        title: 'Barcode Tidak Valid!',
+        text: 'Barcode harus 12/13 digit untuk Buku. Untuk Siswa, silakan klik arahkan kursor ke form siswa dan scan di sana.'
+       });
+     }
+  }
+
+  function displaySiswaInfo(data) {
+     const searchInput = document.getElementById('search');
+     const infoDisplay = document.getElementById('siswa-info-display');
+  
+     if (data && data.id) {
+       // Isi input tersembunyi
+       document.getElementById('siswa_id').value = data.id;
+       
+       // Isi area display
+       document.getElementById('display-nisn').textContent = data.nisn || '-';
+       document.getElementById('display-nama').textContent = data.nama || '-';
+       document.getElementById('display-kelas').textContent = data.kelas || '-'; // Membutuhkan kolom 'kelas' dari backend
+       
+       // Sembunyikan input search, tampilkan display info
+       searchInput.style.display = 'none';
+       infoDisplay.style.display = 'block';
+       
+       renderTable();
+  
+     } else {
+       // Jika data tidak valid/kosong, bersihkan
+       clearSiswa();
+     }
+     $('#result').empty();
+   }
+
+   window.clearSiswa = function() {
+     document.getElementById('siswa_id').value = '';
+     document.getElementById('search').value = '';
+     document.getElementById('search').style.display = 'block';
+     document.getElementById('siswa-info-display').style.display = 'none';
+     document.getElementById("btnSubmit").disabled = true;
+     $('#result').empty();
+     document.getElementById('search').focus();
+     
+     renderTable();
+   };
+
+   function fetchSiswaByBarcode(nisn) {
+     fetch(`/petugas/get-siswa/${nisn}`)
+       .then(res => {
+         if (!res.ok) {
+           if (res.status === 404) {
+             throw new Error(`NISN ${nisn} tidak ditemukan di server (404).`);
+           }
+           throw new Error(`Server error: ${res.status} ${res.statusText}`);
+         }
+         return res.json();
+       })
+       .then(data => {
+         if (data && data.id) {
+          //  alert(`Siswa ditemukan: ${data.nama} (NISN: ${data.nisn})`);
+          toast('success', `Siswa ditemukan: ${data.nama} (NISN: ${data.nisn})`);
+           displaySiswaInfo(data); // ⬅️ Panggil fungsi baru
+         } else {
+          //  alert(`Siswa dengan NISN ${nisn} tidak ditemukan!`);
+          toast('error', `NISN ${nisn} tidak ditemukan`);
+           clearSiswa();
+         }
+         $('#result').empty(); 
+       })
+       .catch(error => {
+         console.error(error); 
+        //  alert("Error koneksi atau server: " + error.message);
+        toast('error', 'Terjadi kesalahan server');
+         clearSiswa();
+       });
+   }
+
+   function prosesScanBarcodeBuku(kode) {
+     // ... (Logika proses buku tetap sama) ...
+     const existing = daftarBarcode.find(b => b.kode === kode);
+     if (existing) {
+       if (existing.status === "✅ Valid" && existing.qty < existing.stok) {
+         existing.qty++;
+       } else if (existing.status.startsWith("❌")) {
+        //  
+        toast('info', `Barcode ${kode} sudah discan`);
+       } else {
+        //  alert(`Stok buku ini hanya ${existing.stok}. Tidak bisa menambah qty lebih dari stok.`);
+        toast('warning', `Stok hanya ${existing.stok}`);
+
+       }
+       renderTable();
+       return;
+     }
+  
+     let index = daftarBarcode.length;
+     daftarBarcode.push({ kode: kode, judul: "-", status: "Loading...", qty: 1, stok: 1 });
+     renderTable();
+  
+     // Ambil data buku via fetch
+     fetch(`/petugas/get-buku/${kode}`)
+       .then(res => res.json())
+       .then(data => {
+         if (data && data.judul) {
+           daftarBarcode[index].judul = data.judul;
+           daftarBarcode[index].stok = data.stok || 1;
+           daftarBarcode[index].status = "✅ Valid";
+
+            if (daftarBarcode.length === 1 && !document.getElementById('siswa_id').value) {
+              fetchSiswaByBuku(kode);
             }
-        
-            // --- Event saat input barcode berubah ---
-            const barcodeInput = document.getElementById('barcode');
-            barcodeInput.addEventListener('change', function () {
-                let barcode = this.value.trim();
-        
-                // Kalau hasil scan 12 digit, tambahkan check digit biar jadi 13
-                if (barcode.length === 12) {
-                    let checkDigit = calculateEAN13CheckDigit(barcode);
-                    barcode = barcode + checkDigit;
-                    this.value = barcode; // update input agar jadi 13 digit
-                }
-        
-                if (barcode !== "") {
-                    fetch(`/petugas/cariBarcode/${barcode}`)
-                        .then(response => response.json())
-                        .then(res => {
-                            if (res.success) {
-                                // isi field hidden (id)
-                                document.getElementById('id').value = res.data.id;
-        
-                                // isi informasi siswa & buku
-                                document.getElementById('nisn').innerText = res.data.nisn;
-                                document.getElementById('nama').innerText = res.data.nama;
-                                document.getElementById('isbn').innerText = res.data.isbn;
-                                document.getElementById('judul').innerText = res.data.judul;
-                                document.getElementById('tanggal_pinjam').innerText = res.data.tanggal_pinjam;
-                                document.getElementById('tanggal_kembali').innerText = res.data.tanggal_kembali;
-        
-                                // Hitung status keterlambatan
-                                let statusText = res.data.status;
-                                const today = new Date();
-                                const kembali = new Date(res.data.tanggal_kembali);
-        
-                                if (statusText === "Dipinjam" && today > kembali) {
-                                    statusText = "Terlambat";
-                                }
-        
-                                document.getElementById('status').innerText = statusText;
-                                document.getElementById('detail-peminjaman').style.display = "block";
-                            } else {
-                                Swal.fire({
-                                    icon: 'warning',
-                                    title: 'Data tidak ditemukan',
-                                    text: res.message,
-                                    confirmButtonText: 'OK'
-                                });
-                                document.getElementById('detail-peminjaman').style.display = "none";
-                            }
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Oops...',
-                                text: 'Terjadi kesalahan saat mengambil data!',
-                                confirmButtonText: 'OK'
-                            });
-                        });
-                }
-            });
-        
+         } else {
+           daftarBarcode[index].judul = "-";
+           daftarBarcode[index].status = "❌ Tidak ditemukan";
+           daftarBarcode[index].stok = 0;
+         }
+         renderTable();
+       })
+       .catch(() => {
+         daftarBarcode[index].status = "❌ Error koneksi";
+         daftarBarcode[index].stok = 0;
+         renderTable();
+       });
+   }
+
+   function renderTable() {
+     const tbody = document.querySelector("#tabelBuku tbody");
+     tbody.innerHTML = "";
+  
+     const validBarcodes = daftarBarcode.filter(b => b.status === "✅ Valid");
+     const siswaTerpilih = document.getElementById('siswa_id').value; // Ambil nilai siswa terpilih
+  
+     if (daftarBarcode.length === 0) {
+       tbody.innerHTML = `
+         <tr class="text-center text-muted">
+           <td colspan="6">📚 Belum ada buku yang discan.</td>
+         </tr>
+       `;
+     } else {
+       // ... (Logika render tabel) ...
+       daftarBarcode.forEach((b, i) => {
+         const isInvalid = b.status.startsWith('❌');
+         const rowClass = isInvalid ? 'table-danger' : '';
+         
+         tbody.innerHTML += `
+           <tr class="${rowClass}">
+             <td>${i + 1}</td>
+             <td>${b.kode}</td>
+             <td>${b.judul}</td>
+             <td>${b.status}</td>
+             <td style="width: 90px;">
+               <input type="number" min="1" max="${b.stok}" class="form-control form-control-sm" 
+                 value="${b.qty || 1}" onchange="ubahQty(${i}, this.value)" ${isInvalid ? 'disabled' : ''}>
+             </td>
+             <td>
+               <button type="button" class="btn btn-sm btn-danger" onclick="hapusBarcode(${i})">
+                 <i class="fa fa-trash"></i>
+               </button>
+             </td>
+           </tr>
+         `;
+       });
+     }
+
+     document.getElementById("btnSubmit").disabled = !siswaTerpilih || validBarcodes.length === 0;
+  
+     const finalBarcodes = validBarcodes.map(b => ({
+       kode: b.kode,
+       qty: b.qty,
+     }));
+     document.getElementById("barcodes").value = JSON.stringify(finalBarcodes);
+   }
+
+   function ubahQty(i, value) {
+     let qty = parseInt(value);
+     if (qty > daftarBarcode[i].stok) {
+      //  alert(`Qty tidak boleh lebih dari stok (${daftarBarcode[i].stok})`);
+      toast('warning', `Qty maksimal ${daftarBarcode[i].stok}`);
+
+       qty = daftarBarcode[i].stok;
+     } else if (qty < 1 || isNaN(qty)) {
+       qty = 1;
+     }
+     daftarBarcode[i].qty = qty;
+     renderTable();
+   }
+
+   function hapusBarcode(i) {
+     daftarBarcode.splice(i, 1);
+     renderTable();
+   }
+
+   function fetchSiswaByBuku(kodeBuku) {
+  fetch(`/petugas/get-siswa-by-buku/${kodeBuku}`)
+    .then(res => res.json())
+    .then(data => {
+      $('#result').empty();
+
+      // ✅ AUTO SELECT JIKA HANYA 1 SISWA
+      if (data.length === 1) {
+        const siswa = data[0];
+
+        displaySiswaInfo({
+          id: siswa.id,
+          nisn: siswa.nisn,
+          nama: siswa.nama,
+          kelas: siswa.kelas || '-'
         });
-        </script>        
-</div>
+
+        $('#result').empty();
+        return;
+      }
+
+      // 👥 JIKA LEBIH DARI 1 SISWA
+      if (data.length > 1) {
+        $('#result').append(
+          '<li class="list-group-item active">📌 Siswa yang sedang meminjam buku ini</li>'
+        );
+
+        data.forEach(siswa => {
+          $('#result').append(`
+            <li class="list-group-item list-group-item-action"
+              data-id="${siswa.id}"
+              data-nisn="${siswa.nisn}"
+              data-nama="${siswa.nama}"
+              data-kelas="${siswa.kelas || '-'}">
+              ${siswa.nisn} - ${siswa.nama} (${siswa.kelas || '-'})
+            </li>
+          `);
+        });
+
+        $('#search').focus();
+        return;
+      }
+
+      // ❌ TIDAK ADA SISWA
+      $('#result').append(
+        '<li class="list-group-item disabled">Tidak ada siswa yang sedang meminjam buku ini</li>'
+      );
+    })
+    .catch(() => {
+      // 
+      toast('error', 'Gagal mengambil data siswa peminjam');
+
+    });
+}
+
+
+   $(document).ready(function(){
+     
+     // 🚀 LOGIKA SCAN SISWA / INPUT MANUAL SISWA (TEKAN ENTER)
+     $('#search').on('keydown', function(e){
+       if (e.key === 'Enter') {
+         e.preventDefault(); 
+         const inputVal = $(this).val().trim();
+         
+         if (inputVal.length === NISN_LENGTH && /^\d+$/.test(inputVal)) {
+           fetchSiswaByBarcode(inputVal);
+         } else if (inputVal.length > 0) {
+           const firstItem = $('#result li:first');
+           if (firstItem.length > 0 && !firstItem.hasClass('disabled')) {
+             firstItem.trigger('click');
+           } else {
+            //  alert("Silakan pilih siswa dari daftar hasil pencarian, atau masukkan/scan NISN 10 digit.");
+             toast('info', 'Silakan pilih siswa dari daftar hasil pencarian, atau masukkan/scan NISN 10 digit.');
+           }
+         }
+       }
+     });
+
+     $('#search').on('keyup', function(){
+       let query = $(this).val();
+  
+       // Hanya lakukan live search jika input search sedang visible (belum ada siswa terpilih)
+       if($('#siswa-info-display').css('display') === 'none') {
+         if(query.length > 1){
+           $.ajax({
+             url: "{{ route('petugas.siswa.search') }}",
+             type: "GET",
+             data: {'q': query},
+             success: function(data){
+               $('#result').empty();
+               if(data.length > 0){
+                 $.each(data, function(index, siswa){
+                   $('#result').append(
+                     '<li class="list-group-item list-group-item-action" data-id="'+siswa.id+'" data-nisn="'+siswa.nisn+'" data-nama="'+siswa.nama+'" data-kelas="'+(siswa.kelas || '-')+'">'+siswa.nisn+' - '+siswa.nama+'</li>'
+                   );
+                 });
+               } else {
+                 $('#result').append('<li class="list-group-item disabled">Tidak ada hasil</li>');
+               }
+             }
+           });
+         } else {
+           $('#result').empty();
+           if(query.length === 0) {
+             clearSiswa(); // Panggil clearSiswa jika input dikosongkan saat live search
+           }
+         }
+       }
+     });
+
+     $(document).on('click', '#result li', function(){
+       let id = $(this).data('id');
+       let nisn = $(this).data('nisn');
+       let nama = $(this).data('nama');
+       let kelas = $(this).data('kelas');
+       
+       displaySiswaInfo({id: id, nisn: nisn, nama: nama, kelas: kelas}); // ⬅️ Panggil fungsi baru
+     });
+   });
+</script>
+
+
 @endsection

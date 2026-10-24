@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Models\Denda;
 use App\Models\Siswa;
 use App\Models\Buku;
 use App\Models\Peminjaman;
@@ -17,7 +18,7 @@ class PeminjamanController extends Controller
 {
     public function index(Request $request)
     {
-        $siswa = Siswa::all();
+        $siswa = Siswa::aktif()->get();
         $buku  = Buku::where('status', 'tersedia')->get();
 
         // ✅ Sesuaikan eager load relasi
@@ -70,6 +71,21 @@ class PeminjamanController extends Controller
 
     public function simpan_peminjaman(Request $request)
     {
+        $siswa = Siswa::findOrFail($request->siswa_id);
+
+        if (!$siswa->bolehMeminjam()) {
+            return back()->with('toast_error', 'Anggota sudah tidak aktif/lulus')->withInput();
+        }
+
+        if (Denda::punyaTunggakan($siswa->id)) {
+            $total = Denda::totalTunggakan($siswa->id);
+
+            return back()->withErrors([
+                'denda' => 'Peminjaman ditolak: ada denda belum lunas sebesar Rp '
+                    . number_format($total, 0, ',', '.'),
+                ])->withInput();
+        }
+
         $validator = Validator::make($request->all(), [
             'siswa_id'         => 'required|exists:siswa,id',
             'barcodes'         => 'required',
@@ -135,6 +151,9 @@ class PeminjamanController extends Controller
 
             return redirect()->route('admin.peminjaman')
                 ->with('toast_success', 'Peminjaman berhasil disimpan!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return back()->with('toast_error', collect($e->errors())->flatten()->first())->withInput();
         } catch (Exception $e) {
             DB::rollBack();
             return back()->with('toast_error', 'Terjadi kesalahan: ' . $e->getMessage());
@@ -204,7 +223,7 @@ class PeminjamanController extends Controller
 
     public function cariSiswa(Request $request)
     {
-        $query = Siswa::query();
+        $query = Siswa::query()->aktif();
 
         if ($request->has('q')) {
             $query->where(function ($q) use ($request) {
@@ -233,10 +252,12 @@ class PeminjamanController extends Controller
     public function search(Request $request)
     {
         $query = $request->get('q');
-        $siswa = Siswa::where('nama', 'like', "%$query%")
-                  ->orWhere('nisn', 'like', "%$query%")
-                  ->limit(10)
-                  ->get(['id','nisn','nama','kelas']);
+       $siswa = Siswa::where(function ($w) use ($query) {
+        $w->where('nama', 'like', "%$query%")
+          ->orWhere('nisn', 'like', "%$query%");
+    })
+    ->limit(10)
+    ->get(['id', 'nisn', 'nama', 'kelas', 'status']);
 
         return response()->json($siswa);
     }
@@ -294,13 +315,15 @@ public function show_siswa($nisn)
     $siswa = Siswa::where('nisn', trim($nisn))->first(); 
 
     if ($siswa) {
-        // KEMBALIKAN SEMUA DATA
         return response()->json([
-            'id'    => $siswa->id, 
-            'nisn'  => $siswa->nisn,
-            'nama'  => $siswa->nama ?? null,
-            'kelas' => $siswa->kelas ?? null, // Pastikan kolom 'kelas' ada di tabel Siswa
-        ], 200);
+            'id'     => $siswa->id,
+            'nisn'   => $siswa->nisn,
+            'nama'   => $siswa->nama ?? null,
+            'kelas'  => $siswa->kelas ?? null,
+            'status' => $siswa->status ?: 'active',
+            'aktif'  => $siswa->bolehMeminjam(),
+            'pesan'  => $siswa->bolehMeminjam() ? null : 'Anggota sudah tidak aktif/lulus',
+            ], 200);
     }
 
     // Jika siswa tidak ditemukan, kembalikan null dengan status 200

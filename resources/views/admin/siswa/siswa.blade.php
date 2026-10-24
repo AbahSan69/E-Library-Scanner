@@ -180,19 +180,18 @@
 
                       </td>                                       
                         <td class="fw-semibold fs-sm">
-                          @if ($list_siswa->status == 'Aktif')
-                              <span class="fs-xs fw-semibold d-inline-block py-1 px-3 rounded-pill bg-success-light text-success">
-                                  {{ $list_siswa->status }}
-                              </span>
-                          @elseif ($list_siswa->status == 'Tidak Aktif')
-                              <span class="fs-xs fw-semibold d-inline-block py-1 px-3 rounded-pill bg-warning-light text-warning">
-                                  {{ $list_siswa->status }}
-                              </span>
-                          @else
-                              <span class="fs-xs fw-semibold d-inline-block py-1 px-3 rounded-pill bg-secondary-light text-secondary">
-                                  {{ $list_siswa->status }}
-                              </span>
-                          @endif
+                          @php
+  $stKey = $list_siswa->status ?: 'active';
+  $pill = [
+    'active'      => 'bg-success-light text-success',
+    'graduated'   => 'bg-info-light text-info',
+    'transferred' => 'bg-warning-light text-warning',
+    'inactive'    => 'bg-secondary-light text-secondary',
+  ];
+@endphp
+<span class="fs-xs fw-semibold d-inline-block py-1 px-3 rounded-pill {{ isset($pill[$stKey]) ? $pill[$stKey] : 'bg-secondary-light text-secondary' }}">
+  {{ $list_siswa->status_label }}
+</span>
                       </td>                        
                         <td class="text-center">
                           <div class="btn-group">
@@ -214,16 +213,18 @@
                             <button type="button" class="btn btn-sm btn-alt-warning js-bs-tooltip-enabled me-2" title="Edit" data-bs-toggle="modal" data-bs-target="#modal-block-vcenter-extra-large-tambah-{{ $list_siswa->id }}">
                               <i class="fa fa-fw fa-pencil"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-alt-danger js-bs-tooltip-enabled" data-bs-toggle="tooltip" aria-label="Delete" data-bs-original-title="Delete" title="Hapus" onclick="confirmationHapusData('{{ route('admin.hapus_siswa', $list_siswa->id) }}')">
-                              <i class="fa fa-fw fa-trash"></i>
-                            </button>
+                            <a href="{{ route('admin.keanggotaan.index', ['q' => $list_siswa->nisn]) }}"
+   class="btn btn-sm btn-alt-secondary js-bs-tooltip-enabled"
+   title="Kelola status keanggotaan (lulus / mutasi / nonaktif)">
+  <i class="fa fa-fw fa-user-cog"></i>
+</a>
                           </div>
                         </td>
                       </tr>
                     </tbody>
 
                     <!-- Modal Detail Data -->
-                    <div class="modal fade" id="modal-block-vcenter-extra-large-Detail-{{ $list_siswa->id }}" tabindex="-1" aria-labelledby="modal-block-vcenter" style="display: none;" aria-hidden="true">
+                    <div class="modal fade" id="modal-block-vcenter-extra-large-detail-{{ $list_siswa->id }}" tabindex="-1" aria-labelledby="modal-block-vcenter" style="display: none;" aria-hidden="true">
                       <div class="modal-dialog modal-dialog-centered" role="document">
                         <div class="modal-content">
                           <div class="block block-rounded block-transparent mb-0">
@@ -244,7 +245,7 @@
                                   <div class="mb-2"><strong>Tanggal Lahir:</strong> {{ $list_siswa->tanggal_lahir }} </div>
                                   <div class="mb-2"><strong>Alamat:</strong> {{ $list_siswa->alamat }} </div>
                                   <div class="mb-2"><strong>No Handphone / WhatsApp:</strong> {{ $list_siswa->no_hp }} </div>
-                                  <div class="mb-2"><strong>Status:</strong> {{ $list_siswa->status }} </div>
+                                  <div class="mb-2"><strong>Status:</strong> {{ $list_siswa->status_label }}</div>
                             </div>
                             </div>
                             <div class="block-content block-content-full text-end bg-body">
@@ -314,13 +315,10 @@
                                   <small class="form-text text-muted">Hanya masukkan angka, maksimal 15 digit.</small>
                                 </div>
                                 <div class="mb-4">
-                                  <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
-                                  <select id="status" name="status" class="form-select select-search instructor" required>
-                                    <option value="" selected disabled>Pilih Status</option>
-                                    <option value="Aktif" {{ old('status', $list_siswa->status ?? '') == 'Aktif' ? 'selected' : '' }}>Aktif</option>
-                                    <option value="Tidak Aktif" {{ old('status', $list_siswa->status ?? '') == 'Tidak Aktif' ? 'selected' : '' }}>Tidak Aktif</option>
-                                  </select>
-                                </div>
+  <label class="form-label">Status Keanggotaan</label>
+  <div><b>{{ $list_siswa->status_label }}</b></div>
+  <div class="form-text">Status diubah lewat menu Keanggotaan.</div>
+</div>
                               </div>
                             </div>
                             <div class="block-content block-content-full text-end bg-body">

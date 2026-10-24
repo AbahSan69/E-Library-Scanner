@@ -11,10 +11,16 @@ use Exception;
 
 class AkunController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $akun = User::all();
-        return view('admin.akun.akun', compact('akun'));
+        $search = $request->query('search');
+        if($search) {
+            $akun = User::where('name', 'like', "%$search%")->get();
+        }else{
+            $akun = User::all();
+        }
+        $total_akun = $akun->count();
+        return view('admin.akun.akun', compact('akun', 'total_akun'));
     }
 
     public function simpan_akun(Request $request)

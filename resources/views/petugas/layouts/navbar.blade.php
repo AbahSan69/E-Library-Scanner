@@ -19,6 +19,12 @@
         </a>
       </li>
       <li class="nav-main-item">
+        <a class="nav-main-link {{ Request::is('petugas/denda') ? 'active' : '' }}" href="{{ route('petugas.denda.index') }}">
+            <i class="nav-main-link-icon si si-wallet"></i>
+            <span class="nav-main-link-name">Denda</span>
+        </a>
+      </li>
+      <li class="nav-main-item">
         <a class="nav-main-link {{ Request::is('petugas/buku') ? 'active' : '' }}" href="{{ route('petugas.buku') }}">
             <i class="nav-main-link-icon si si-book-open"></i>
             <span class="nav-main-link-name">Buku</span>
@@ -30,6 +36,18 @@
             <span class="nav-main-link-name">Siswa</span>
         </a>
       </li>
+      <li class="nav-main-item">
+  <a class="nav-main-link {{ request()->routeIs('petugas.laporan.*') ? 'active' : '' }}" href="{{ route('petugas.laporan.index') }}">
+    <i class="nav-main-link-icon si si-docs"></i>
+    <span class="nav-main-link-name">Laporan</span>
+  </a>
+</li>
+<li class="nav-main-item">
+  <a class="nav-main-link {{ request()->routeIs('petugas.keanggotaan.*') ? 'active' : '' }}" href="{{ route('petugas.keanggotaan.index') }}">
+    <i class="nav-main-link-icon si si-users"></i>
+    <span class="nav-main-link-name">Keanggotaan</span>
+  </a>
+</li>
     </ul>
   </div>
 </div>

@@ -4,14 +4,22 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\StatusAnggota;
 
 class Siswa extends Model
 {
+    use StatusAnggota; // <-- ini yang memasang trait
+
     protected $table = 'siswa';
-    protected $fillable = ['nisn', 'nama', 'kelas','jenis_kelamin','tanggal_lahir','alamat','no_hp','status'];
+    protected $fillable = ['nisn', 'nama', 'kelas', 'jenis_kelamin', 'tanggal_lahir', 'alamat', 'no_hp', 'status'];
 
     public function peminjaman()
     {
         return $this->hasMany(Peminjaman::class);
+    }
+
+    public function denda()
+    {
+        return $this->hasMany(Denda::class);
     }
 }

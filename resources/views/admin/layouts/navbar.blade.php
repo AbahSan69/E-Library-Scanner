@@ -19,6 +19,12 @@
         </a>
       </li>
       <li class="nav-main-item">
+        <a class="nav-main-link {{ Request::is('admin/denda') ? 'active' : '' }}" href="{{ route('admin.denda.index') }}">
+            <i class="nav-main-link-icon si si-wallet"></i>
+            <span class="nav-main-link-name">Denda</span>
+        </a>
+      </li>
+      <li class="nav-main-item">
         <a class="nav-main-link {{ Request::is('admin/buku') ? 'active' : '' }}" href="{{ route('admin.buku') }}">
             <i class="nav-main-link-icon si si-book-open"></i>
             <span class="nav-main-link-name">Buku</span>
@@ -30,12 +36,25 @@
             <span class="nav-main-link-name">Siswa</span>
         </a>
       </li>
-      {{-- <li class="nav-main-item">
+
+      <li class="nav-main-item">
+  <a class="nav-main-link {{ request()->routeIs('admin.laporan.*') ? 'active' : '' }}" href="{{ route('admin.laporan.index') }}">
+    <i class="nav-main-link-icon si si-docs"></i>
+    <span class="nav-main-link-name">Laporan</span>
+  </a>
+</li>
+<li class="nav-main-item">
+  <a class="nav-main-link {{ request()->routeIs('admin.keanggotaan.*') ? 'active' : '' }}" href="{{ route('admin.keanggotaan.index') }}">
+    <i class="nav-main-link-icon si si-users"></i>
+    <span class="nav-main-link-name">Keanggotaan</span>
+  </a>
+</li>
+      <li class="nav-main-item">
         <a class="nav-main-link {{ Request::is('admin/akun') ? 'active' : '' }}" href="{{ route('admin.akun') }}">
             <i class="nav-main-link-icon si si-user"></i>
             <span class="nav-main-link-name">Akun</span>
         </a>
-      </li> --}}
+      </li>
       {{-- <li class="nav-main-heading">Heading</li>
       <li class="nav-main-item">
         <a class="nav-main-link nav-main-link-submenu" data-toggle="submenu" aria-haspopup="true" aria-expanded="false" href="#">

@@ -181,15 +181,8 @@ class SiswaController extends Controller
 
     public function hapus_siswa($id)
     {
-        $siswa = Siswa::find($id);
-
-        if (!$siswa) {
-            return redirect()->back()->with('toast_error', 'Data tidak ditemukan!');
-        }
-
-        $siswa->delete();
-        return redirect()->route('admin.siswa')
-                         ->with('toast_success', 'Data Berhasil Dihapus!');
+        return redirect()->route('admin.keanggotaan.index')
+        ->with('error', 'Data siswa tidak boleh dihapus. Ubah status keanggotaannya (lulus, mutasi, atau nonaktif).');
     }
 
     public function download_format()

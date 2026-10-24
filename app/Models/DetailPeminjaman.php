@@ -19,4 +19,14 @@ class DetailPeminjaman extends Model
     {
         return $this->belongsTo(Buku::class);
     }
+
+    public function denda()
+    {
+        return $this->hasOne(Denda::class, 'detail_peminjaman_id');
+    }
+
+    public function dendaBerjalan()
+    {
+        return $this->hasOne(Denda::class, 'detail_peminjaman_id')->where('is_final', false);
+    }
 }

@@ -437,17 +437,24 @@
                 return res.json();
             })
             .then(data => {
-                if (data && data.id) {
-  //                   alert(`Siswa ditemukan: ${data.nama} (NISN: ${data.nisn})`);
-                    toast('success', `Siswa ditemukan: ${data.nama} (NISN: ${data.nisn})`);
-                    displaySiswaInfo(data); // ⬅️ Panggil fungsi baru
-                } else {
-  //                   alert(`Siswa dengan NISN ${nisn} tidak ditemukan!`);
-                    toast('error', `NISN ${nisn} tidak ditemukan`);
-                    clearSiswa();
-                }
-                $('#result').empty(); 
-            })
+    if (data && data.id) {
+        if (data.aktif === false) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Tidak dapat meminjam',
+                text: data.pesan || 'Anggota sudah tidak aktif/lulus'
+            });
+            clearSiswa();
+            return;
+        }
+        toast('success', `Siswa ditemukan: ${data.nama} (NISN: ${data.nisn})`);
+        displaySiswaInfo(data);
+    } else {
+        toast('error', `NISN ${nisn} tidak ditemukan`);
+        clearSiswa();
+    }
+    $('#result').empty();
+})
             .catch(error => {
                 console.error(error); 
   //               alert("Error koneksi atau server: " + error.message);
@@ -609,11 +616,19 @@
                         success: function(data){
                             $('#result').empty();
                             if(data.length > 0){
-                                $.each(data, function(index, siswa){
-                                    $('#result').append(
-                                        '<li class="list-group-item list-group-item-action" data-id="'+siswa.id+'" data-nisn="'+siswa.nisn+'" data-nama="'+siswa.nama+'" data-kelas="'+(siswa.kelas || '-')+'">'+siswa.nisn+' - '+siswa.nama+'</li>'
-                                    );
-                                });
+                                const labelStatus = { graduated: 'Lulus', transferred: 'Mutasi', inactive: 'Nonaktif' };
+$.each(data, function(index, siswa){
+    if (siswa.status && siswa.status !== 'active') {
+        $('#result').append(
+            '<li class="list-group-item disabled text-muted">' + siswa.nisn + ' - ' + siswa.nama +
+            ' <span class="badge bg-secondary">' + (labelStatus[siswa.status] || siswa.status) + '</span></li>'
+        );
+    } else {
+        $('#result').append(
+            '<li class="list-group-item list-group-item-action" data-id="'+siswa.id+'" data-nisn="'+siswa.nisn+'" data-nama="'+siswa.nama+'" data-kelas="'+(siswa.kelas || '-')+'">'+siswa.nisn+' - '+siswa.nama+'</li>'
+        );
+    }
+});
                             } else {
                                 $('#result').append('<li class="list-group-item disabled">Tidak ada hasil</li>');
                             }
@@ -629,7 +644,7 @@
         });
   
         // Logika click pada hasil live search (diperbarui untuk display info)
-        $(document).on('click', '#result li', function(){
+        $(document).on('click', '#result li:not(.disabled)', function(){
             let id = $(this).data('id');
             let nisn = $(this).data('nisn');
             let nama = $(this).data('nama');

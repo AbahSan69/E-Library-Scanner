@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\BlokirAnggotaNonaktif;
 use Carbon\Carbon;
 
 class Peminjaman extends Model
 {
+    use BlokirAnggotaNonaktif;
     protected $table = 'peminjaman';
     protected $fillable = ['siswa_id', 'tanggal_pinjam','tanggal_kembali','status'];
 
@@ -37,4 +39,14 @@ class Peminjaman extends Model
 
         return $this->status;
     }
+
+    public function denda()
+{
+    return $this->hasManyThrough(
+        Denda::class,
+        DetailPeminjaman::class,
+        'id_peminjaman',        // FK di detail_peminjaman
+        'detail_peminjaman_id', // FK di denda
+    );
+}
 }
